@@ -1,0 +1,272 @@
+#! /bin/sh
+
+JINX_MAJOR_VER=0.12
+JINX_DEBIAN_SNAPSHOT=20260906T023042Z
+JINX_BASE_PACKAGES="autopoint bison cmake docbook-xsl docbook-xml docbook-xsl-ns docbook5-xml doxygen file flex gettext groff itstool m4 make meson ninja-build perl python3 texinfo w3m which xmlto xsltproc"
+
+HOST_CFLAGS="-O2 -pipe -fstack-clash-protection -Wp,-D_FORTIFY_SOURCE=3"
+HOST_CXXFLAGS="${HOST_CFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
+HOST_LDFLAGS="-Wl,-O1 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now"
+
+TARGET_CFLAGS="$HOST_CFLAGS"
+TARGET_CXXFLAGS="$HOST_CXXFLAGS"
+TARGET_LDFLAGS="$HOST_LDFLAGS"
+
+TARGET_CFLAGS="$TARGET_CFLAGS -ffile-prefix-map=/base_dir=/usr/src -ffile-prefix-map=/build_dir=/usr/src -ffile-prefix-map=/sysroot= -ffile-prefix-map=../../../base_dir=/usr/src"
+TARGET_CXXFLAGS="$TARGET_CXXFLAGS -ffile-prefix-map=/base_dir=/usr/src -ffile-prefix-map=/build_dir=/usr/src -ffile-prefix-map=/sysroot= -ffile-prefix-map=../../../base_dir=/usr/src"
+
+TARGET_CFLAGS="$TARGET_CFLAGS -ffile-prefix-map=/usr/local/lib/gcc=/usr/lib/gcc"
+TARGET_CXXFLAGS="$TARGET_CXXFLAGS -ffile-prefix-map=/usr/local/lib/gcc=/usr/lib/gcc"
+
+# Tunix speaks the Linux system call ABI, so Tulpar is an ordinary linux-gnu
+# target; the vendor field only keeps the cross tools apart from the host ones.
+OS_TRIPLET=${JINX_ARCH}-tulpar-linux-gnu
+
+TARGET_CXXFLAGS="$TARGET_CXXFLAGS -ffile-prefix-map=/usr/local/${OS_TRIPLET}/include=/usr/include"
+
+case "${JINX_ARCH}" in
+    x86_64)
+        TARGET_CFLAGS="$TARGET_CFLAGS -march=x86-64 -mtune=generic -fcf-protection -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer"
+        TARGET_CXXFLAGS="$TARGET_CXXFLAGS -march=x86-64 -mtune=generic -fcf-protection -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer"
+        TARGET_LDFLAGS="$TARGET_LDFLAGS -Wl,-z,pack-relative-relocs"
+        ;;
+    aarch64)
+        TARGET_CFLAGS="$TARGET_CFLAGS -march=armv8-a -fno-omit-frame-pointer"
+        TARGET_CXXFLAGS="$TARGET_CXXFLAGS -march=armv8-a -fno-omit-frame-pointer"
+        TARGET_LDFLAGS="$TARGET_LDFLAGS -Wl,-z,pack-relative-relocs"
+        ;;
+    *)
+        echo "Tulpar targets x86_64 and aarch64." >&2
+        exit 1
+        ;;
+esac
+
+post_package_strip() {
+    if [ -z "${strip_command-}" ]; then
+        strip_command="${OS_TRIPLET}-strip"
+    fi
+
+    for f in $(find "${dest_dir}${prefix}/bin" "${dest_dir}${prefix}/lib" "${dest_dir}${prefix}/libexec" 2>/dev/null); do
+        # Skip .o files - stripping relocatable objects removes relocation info
+        case "$f" in
+            *.o) continue ;;
+        esac
+        if file "$f" | grep 'not stripped' >/dev/null; then
+            echo "* stripping '$f'..."
+            stripped_file="$(mktemp)"
+            ${strip_command} "$f" -o "$stripped_file"
+            chmod --reference="$f" "$stripped_file"
+            mv -f "$stripped_file" "$f"
+        fi
+    done
+}
+
+_install_hook_actions=""
+_remove_hook_actions=""
+
+_write_hook() {
+    {
+        printf '#! /bin/sh\n\n'
+        printf 'export PATH="/usr/bin"\n\n'
+        printf 'ACTION="$1"\n\n'
+        printf 'case "${ACTION}" in\n'
+        if [ "$1" = pre ]; then
+            printf 'pre)\n%s    ;;\npost)\n    ;;\n' "$3"
+        else
+            printf 'pre)\n    ;;\npost)\n%s    ;;\n' "$3"
+        fi
+        printf 'esac\n\nexit 0\n'
+    } >"${dest_dir}/$2"
+    chmod +x "${dest_dir}/$2"
+}
+
+_indent_actions() {
+    for _ia in "$@"; do
+        printf '%s\n' "${_ia}" | sed -e 's/^/    /' -e 's/^  *$//'
+    done
+}
+
+install_hook_add() {
+    _install_hook_actions="${_install_hook_actions}$(_indent_actions "$@")
+"
+    _write_hook post INSTALL "${_install_hook_actions}"
+}
+
+remove_hook_add() {
+    _remove_hook_actions="${_remove_hook_actions}$(_indent_actions "$@")
+"
+    _write_hook pre REMOVE "${_remove_hook_actions}"
+}
+
+generate_glib_schemas_hook() {
+    install_hook_add 'glib-compile-schemas /usr/share/glib-2.0/schemas/ >/dev/null'
+}
+
+generate_info_hooks() {
+    _gih_list=""
+    for _gih in "${dest_dir}${prefix}"/share/info/*.info \
+                "${dest_dir}${prefix}"/share/info/*.info.gz; do
+        [ -e "${_gih}" ] || continue
+        _gih_list="${_gih_list} ${prefix}/share/info/$(basename "${_gih}")"
+    done
+    [ -n "${_gih_list}" ] || return 0
+    install_hook_add "for _f in${_gih_list}; do
+    install-info \"\${_f}\" ${prefix}/share/info/dir >/dev/null 2>&1 || true
+done"
+    remove_hook_add "for _f in${_gih_list}; do
+    install-info --delete \"\${_f}\" ${prefix}/share/info/dir >/dev/null 2>&1 || true
+done"
+}
+
+generate_info_catchall_hook() {
+    install_hook_add "for _f in ${prefix}/share/info/*.info ${prefix}/share/info/*.info.gz; do
+    [ -e \"\${_f}\" ] || continue
+    install-info \"\${_f}\" ${prefix}/share/info/dir >/dev/null 2>&1 || true
+done"
+}
+
+generate_font_cache_hook() {
+    install_hook_add "fc-cache ${1:--s} >/dev/null 2>&1 || true"
+}
+
+generate_mime_database_hook() {
+    install_hook_add "update-mime-database ${prefix}/share/mime >/dev/null 2>&1 || true"
+}
+
+autotools_configure() {
+        CFLAGS="$TARGET_CFLAGS" \
+        CXXFLAGS="$TARGET_CXXFLAGS" \
+        LDFLAGS="$TARGET_LDFLAGS" \
+    autotools_configure_noflags "$@"
+}
+
+# --build is explicit because the target is x86_64 Linux too: autoconf would
+# find that it can run what it builds and fall back to a native build.
+autotools_configure_noflags() {
+    if [ -z "${configure_script_path-}" ]; then
+        configure_script_path="${source_dir}/configure"
+    fi
+
+        ac_cv_func_malloc_0_nonnull=yes \
+        ac_cv_func_calloc_0_nonnull=yes \
+        ac_cv_func_realloc_0_nonnull=yes \
+    ${configure_script_path} \
+        --build=$(uname -m)-pc-linux-gnu \
+        --host=${OS_TRIPLET} \
+        --with-sysroot=${sysroot} \
+        --prefix=${prefix} \
+        --sysconfdir=/etc \
+        --localstatedir=/var \
+        --bindir=${prefix}/bin \
+        --sbindir=${prefix}/bin \
+        --libdir=${prefix}/lib \
+        --disable-static \
+        --enable-shared \
+        --disable-malloc0returnsnull \
+        --disable-tests \
+        --disable-debug \
+        --disable-rpath \
+        --disable-silent-rules \
+        "$@"
+}
+
+checked_subst() {
+    tmpfile="$2".checked_subst
+    sed -z -E -e "$1" "$2" >"$tmpfile"
+    if cmp -s "$2" "$tmpfile"; then
+        rm -f "$2".checked_subst
+        if [ "${3-}" = no_die ]; then
+            return 1
+        else
+            die "*** substitution '$1' failed for file '$2'"
+        fi
+    fi
+
+    #diff --color=auto -ur "$2" "$tmpfile" || true
+
+    touch -r "$2" "$2".checked_subst
+    chmod --reference="$2" "$2".checked_subst
+    mv -f "$2".checked_subst "$2"
+}
+
+autotools_recursive_regen() {
+    # linux-gnu is known to every config.sub and libtool; only the link order
+    # of $compiler_flags needs fixing so -Wl,--as-needed sees the libraries.
+    for f in $(grep -rlI '$compiler_flags'); do
+        if grep -qE '\\?\$predep_objects \\?\$libobjs \\?\$deplibs \\?\$postdep_objects \\?\$compiler_flags' "$f"; then
+            checked_subst 's/(\\?)\$predep_objects (\\?)\$libobjs (\\?)\$deplibs (\\?)\$postdep_objects (\\?)\$compiler_flags/\1$predep_objects \2$libobjs \5$compiler_flags \3$deplibs \4$postdep_objects/g' "$f"
+        fi
+        if grep -qE '\\?\$libobjs \\?\$deplibs \\?\$compiler_flags' "$f"; then
+            checked_subst 's/(\\?)\$libobjs (\\?)\$deplibs (\\?)\$compiler_flags/\1$libobjs \3$compiler_flags \2$deplibs/g' "$f"
+        fi
+    done
+
+    if ! [ -z "$(grep -rlIE '(\\?\$predep_objects \\?\$libobjs \\?\$deplibs \\?\$postdep_objects|\\?\$libobjs \\?\$deplibs) \\?\$compiler_flags')" ]; then
+        die "*** Failed to fix libtool link order :3 ***"
+    fi
+}
+
+meson_configure() {
+        CFLAGS="$TARGET_CFLAGS" \
+        CXXFLAGS="$TARGET_CXXFLAGS" \
+        LDFLAGS="$TARGET_LDFLAGS" \
+    meson_configure_noflags "$@"
+}
+
+meson_configure_noflags() {
+    if [ -z "${meson_source_dir-}" ]; then
+        meson_source_dir="${source_dir}"
+    fi
+
+    meson setup "${meson_source_dir}" \
+        --cross-file "${base_dir}/build-support/cross_file-${JINX_ARCH}.txt" \
+        --prefix=${prefix} \
+        --sysconfdir=/etc \
+        --localstatedir=/var \
+        --libdir=lib \
+        --sbindir=bin \
+        --buildtype=release \
+        --wrap-mode=nodownload \
+        --auto-features=enabled \
+        -Ddefault_library=shared \
+        -Db_ndebug=true \
+        "$@"
+}
+
+cmake_configure() {
+        CFLAGS="$TARGET_CFLAGS" \
+        CXXFLAGS="$TARGET_CXXFLAGS" \
+        LDFLAGS="$TARGET_LDFLAGS" \
+    cmake_configure_noflags \
+        -DCMAKE_EXE_LINKER_FLAGS_RELEASE="$TARGET_LDFLAGS" \
+        -DCMAKE_SHARED_LINKER_FLAGS_RELEASE="$TARGET_LDFLAGS" \
+        -DCMAKE_MODULE_LINKER_FLAGS_RELEASE="$TARGET_LDFLAGS" \
+        "$@"
+}
+
+cmake_configure_noflags() {
+    if [ -z "${cmake_source_dir-}" ]; then
+        cmake_source_dir="${source_dir}"
+    fi
+
+    cmake "${cmake_source_dir}" \
+        -DCMAKE_TOOLCHAIN_FILE="${base_dir}/build-support/CMakeToolchain-${JINX_ARCH}.txt" \
+        -DCMAKE_INSTALL_PREFIX=${prefix} \
+        -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+        -DCMAKE_INSTALL_LOCALSTATEDIR=/var \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DCMAKE_INSTALL_SBINDIR=bin \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_C_FLAGS_RELEASE=-DNDEBUG \
+        -DCMAKE_CXX_FLAGS_RELEASE=-DNDEBUG \
+        -DBUILD_SHARED_LIBS=ON \
+        -DBUILD_STATIC_LIBS=OFF \
+        -DENABLE_STATIC=OFF \
+        -DBUILD_TESTING=OFF \
+        -DCMAKE_SKIP_INSTALL_RPATH=ON \
+        -DCMAKE_VERBOSE_MAKEFILE=ON \
+        -DPKG_CONFIG_EXECUTABLE="/usr/local/bin/$OS_TRIPLET-pkg-config" \
+        -DCMAKE_COLOR_DIAGNOSTICS=ON \
+        -GNinja \
+        "$@"
+}

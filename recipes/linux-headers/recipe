@@ -1,0 +1,25 @@
+#! /bin/sh
+
+# Tunix implements the Linux system call ABI, so glibc is built against the
+# Linux UAPI headers, not against the kernel's own source tree.
+skip_pkg_check=yes
+version=6.18
+revision=1
+tarball_url="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${version}.tar.xz"
+tarball_blake2b="b94b7b9bf18aca0c3e50baf79b009a1448fc6cd9c3ee019f641cc247dcf53a4abef4274ee0608ad8cd4943af69854363a95d26e117ff23620bb07dccb158859f"
+imagedeps="build-essential rsync"
+
+build() {
+    cp -rp "${source_dir}"/. ./
+    case "${JINX_ARCH}" in
+        aarch64) _arch=arm64 ;;
+        *) _arch=${JINX_ARCH} ;;
+    esac
+    make ARCH=${_arch} headers
+    find usr/include -type f ! -name '*.h' -delete
+}
+
+package() {
+    mkdir -p "${dest_dir}${prefix}"
+    cp -r usr/include "${dest_dir}${prefix}"/
+}

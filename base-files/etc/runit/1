@@ -1,0 +1,12 @@
+#!/bin/sh
+# Stage 1: one-time setup. Tunix has already mounted /, /proc, /sys and /dev.
+PATH=/usr/bin
+
+mount -a
+mkdir -p /run/runit /tmp/.ICE-unix /tmp/.X11-unix
+chmod 1777 /tmp /tmp/.ICE-unix /tmp/.X11-unix
+install -m000 /dev/null /run/runit/stopit
+install -m000 /dev/null /run/runit/reboot
+
+hostname "$(cat /etc/hostname)"
+tulpar-first-boot

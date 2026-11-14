@@ -1,0 +1,28 @@
+#! /bin/sh
+
+version=12.9.6
+revision=1
+tarball_url="https://github.com/Limine-Bootloader/Limine/releases/download/v${version}/limine-${version}.tar.gz"
+tarball_blake2b="0df4f5a85d70f96e701e34df4ae34ae775ef694fbdba41c97efc3997e0831f518cbf90ce0148bd9c2e1adb444c3e9448e5ff65cb1e4c87c19ef58ea237734c64"
+imagedeps="build-essential mtools nasm llvm lld clang"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure \
+        --enable-all
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

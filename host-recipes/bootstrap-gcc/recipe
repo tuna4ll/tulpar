@@ -1,0 +1,70 @@
+#! /bin/sh
+
+from_source=gcc
+revision=5
+imagedeps="build-essential pkg-config libmpfr-dev libgmp-dev libisl-dev libmpc-dev"
+imagerundeps="libmpfr6 libgmp10 libisl23 libmpc3"
+hostdeps="pkg-config"
+hostrundeps="binutils"
+_glibc_version="$(. "${base_dir}/recipes/glibc/recipe" && echo "${version}")"
+
+configure() {
+    mkdir -p build && cd build
+
+        CFLAGS="$HOST_CFLAGS" \
+        CXXFLAGS="$HOST_CXXFLAGS" \
+        LDFLAGS="$HOST_LDFLAGS" \
+        CFLAGS_FOR_TARGET="$TARGET_CFLAGS -g" \
+        CXXFLAGS_FOR_TARGET="$TARGET_CXXFLAGS -g" \
+        LDFLAGS_FOR_TARGET="$TARGET_LDFLAGS" \
+    "${source_dir}"/configure \
+        --prefix="${prefix}" \
+        --target=${OS_TRIPLET} \
+        --with-sysroot="${sysroot}" \
+        --with-glibc-version=${_glibc_version} \
+        --with-newlib \
+        --without-headers \
+        --disable-fixincludes \
+        --with-gcc-major-version-only \
+        --with-linker-hash-style=gnu \
+        --enable-checking=release \
+        --enable-default-pie \
+        --enable-default-ssp \
+        --enable-gnu-indirect-function \
+        --enable-gnu-unique-object \
+        --enable-link-serialization=1 \
+        --enable-linker-build-id \
+        --enable-languages=c,c++,lto \
+        --enable-lto \
+        --disable-multilib \
+        --disable-libstdcxx-pch \
+        --disable-werror \
+        --disable-libatomic \
+        --disable-libgomp \
+        --disable-libquadmath \
+        --disable-libssp \
+        --disable-libstdcxx \
+        --disable-libvtv \
+        --disable-multilib \
+        --disable-nls \
+        --disable-shared \
+        --disable-silent-rules \
+        --disable-threads
+}
+
+build() {
+    cd build
+
+    make -j${parallelism} all-gcc
+    make -j${parallelism} all-target-libgcc
+}
+
+package() {
+    cd build
+
+    DESTDIR="${dest_dir}" make install-gcc
+    DESTDIR="${dest_dir}" make install-target-libgcc
+
+        strip_command=strip \
+    post_package_strip
+}

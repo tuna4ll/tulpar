@@ -1,0 +1,79 @@
+#! /bin/sh
+
+version=16.2.0
+tarball_url="https://ftp.gnu.org/gnu/gcc/gcc-${version}/gcc-${version}.tar.xz"
+tarball_blake2b="ab3ffe16e042da767f3f1eac170da518d6d7de3b0f92e068f79e3bf25fdc0bdf56eea0cd586bd4b9b6e9baebadd110c2ebd77b75c99c45853814f4bea5a98ef0"
+revision=8
+hostdeps="gcc pkg-config"
+deps="core-libs binutils gmp mpc mpfr zlib zstd texinfo"
+builddeps="gettext"
+imagedeps="build-essential"
+_glibc_version="$(. "${base_dir}/recipes/glibc/recipe" && echo "${version}")"
+
+prepare() {
+    # Tulpar keeps everything in /usr/lib (lib64 is a symlink to it).
+    checked_subst 's|m64=../lib64|m64=../lib|' gcc/config/i386/t-linux64
+    checked_subst 's|mabi.lp64=../lib64|mabi.lp64=../lib|' gcc/config/aarch64/t-aarch64-linux
+
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure \
+        CFLAGS_FOR_BUILD="$HOST_CFLAGS" \
+        CXXFLAGS_FOR_BUILD="$HOST_CXXFLAGS" \
+        LDFLAGS_FOR_BUILD="$HOST_LDFLAGS" \
+        CFLAGS_FOR_TARGET="$TARGET_CFLAGS" \
+        CXXFLAGS_FOR_TARGET="$TARGET_CXXFLAGS" \
+        LDFLAGS_FOR_TARGET="$TARGET_LDFLAGS" \
+        --target=${OS_TRIPLET} \
+        --with-sysroot= \
+        --with-build-sysroot=${sysroot} \
+        --with-glibc-version=${_glibc_version} \
+        --enable-__cxa_atexit \
+        --enable-cet=auto \
+        --enable-checking=release \
+        --enable-clocale=gnu \
+        --with-linker-hash-style=gnu \
+        --enable-default-pie \
+        --enable-default-ssp \
+        --enable-gnu-indirect-function \
+        --enable-gnu-unique-object \
+        --enable-libstdcxx-backtrace \
+        --enable-link-serialization=1 \
+        --enable-linker-build-id \
+        --enable-languages=c,c++,lto \
+        --enable-lto \
+        --disable-fixincludes \
+        --with-gcc-major-version-only \
+        --disable-multilib \
+        --enable-plugin \
+        --enable-host-shared \
+        --enable-threads=posix \
+        --disable-libssp \
+        --disable-libstdcxx-pch \
+        --disable-werror \
+        --with-system-zlib
+
+    # Build-machine tools get CFLAGS_FOR_BUILD but the target's CXXFLAGS, which
+    # the build compiler rejects on another architecture (-march=armv8-a).
+    checked_subst 's/(\nEXTRA_BUILD_FLAGS = \\\n\tCFLAGS="\$\(CFLAGS_FOR_BUILD\)" \\\n)/\1\tCXXFLAGS="$(CXXFLAGS_FOR_BUILD)" \\\n/' Makefile
+}
+
+build() {
+    make -j${parallelism} all-gcc
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install-gcc
+
+    ln -s gcc "${dest_dir}${prefix}"/bin/cc
+    cp -v "${recipe_dir}"/c89 "${dest_dir}${prefix}"/bin/
+    cp -v "${recipe_dir}"/c99 "${dest_dir}${prefix}"/bin/
+    chmod +x "${dest_dir}${prefix}"/bin/c89
+    chmod +x "${dest_dir}${prefix}"/bin/c99
+
+    post_package_strip
+
+    generate_info_hooks
+}

@@ -1,0 +1,5 @@
+NAME="Tulpar"
+PRETTY_NAME="Tulpar GNU/Tunix"
+ID=tulpar
+ANSI_COLOR="1;36"
+HOME_URL="https://github.com/tuna4ll/tunix"

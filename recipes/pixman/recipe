@@ -1,0 +1,41 @@
+#! /bin/sh
+
+version=0.46.4
+revision=4
+tarball_url="https://cairographics.org/releases/pixman-${version}.tar.gz"
+tarball_blake2b="03c074c8ed1e0d9ebacb2aacd9f6ef41c3ee6a8a22aa50863a3fe5ef28127dab22a5f5ef52add3c600d1ec309af86c7abfd0b1130e113df082f0b848f4827a37"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    SIMD_FLAGS="-Dloongson-mmi=disabled -Dvmx=disabled -Dmips-dspr2=disabled"
+    SIMD_FLAGS="${SIMD_FLAGS} -Darm-simd=disabled -Dneon=disabled"
+    case "${JINX_ARCH}" in
+        x86_64)
+            SIMD_FLAGS="${SIMD_FLAGS} -Drvv=disabled -Da64-neon=disabled"
+            ;;
+        aarch64)
+            SIMD_FLAGS="${SIMD_FLAGS} -Dmmx=disabled -Dsse2=disabled -Dssse3=disabled -Drvv=disabled"
+            ;;
+        *)
+            SIMD_FLAGS="${SIMD_FLAGS} -Dmmx=disabled -Dsse2=disabled -Dssse3=disabled -Da64-neon=disabled"
+            ;;
+    esac
+
+    meson_configure \
+        ${SIMD_FLAGS} \
+        -Dopenmp=disabled \
+        -Dtests=disabled \
+        -Dgtk=disabled \
+        -Dlibpng=disabled
+}
+
+build() {
+    meson compile --verbose -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}

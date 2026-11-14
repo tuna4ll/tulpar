@@ -1,0 +1,28 @@
+#! /bin/sh
+
+version=1.5
+revision=1
+tarball_url="https://ftp.gnu.org/gnu/libunistring/libunistring-${version}.tar.xz"
+tarball_blake2b="39adbcf2598b62b1a4c7fafed5191dd79955364faa82449bdb583c087b4a602a26c9ffd7affbf82a88a6c1480c829a9cd8c3fe09fa7158485fb7442fc48a9e0f"
+hostdeps="gcc pkg-config"
+deps="core-libs texinfo"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+
+    generate_info_hooks
+}

@@ -1,0 +1,54 @@
+#! /bin/sh
+
+version=2.44
+revision=1
+tarball_url="https://ftp.gnu.org/gnu/glibc/glibc-${version}.tar.xz"
+tarball_blake2b="f943e302ad4e44a204e4c5d85460653bec030717c2a502f16764d74bd6d87c280e126f37820b96ec726aff611a8c4e0dba95a7b4d72907adcb0aa88d304e4823"
+hostdeps="bootstrap-gcc pkg-config"
+deps="linux-headers"
+
+configure() {
+    # glibc handles fortify internally via --enable-fortify-source.
+    TARGET_CFLAGS="${TARGET_CFLAGS//-Wp,-D_FORTIFY_SOURCE=?/}"
+    TARGET_CXXFLAGS="${TARGET_CXXFLAGS//-Wp,-D_FORTIFY_SOURCE=?/}"
+
+    TARGET_CFLAGS="${TARGET_CFLAGS} -g"
+    TARGET_CXXFLAGS="${TARGET_CXXFLAGS} -g"
+
+    for _m in /base_dir=/usr/src /build_dir=/usr/src /sysroot= /usr/local/lib/gcc=/usr/lib/gcc; do
+        TARGET_CFLAGS="${TARGET_CFLAGS} -fdebug-prefix-map=${_m}"
+        TARGET_CXXFLAGS="${TARGET_CXXFLAGS} -fdebug-prefix-map=${_m}"
+    done
+
+    echo "slibdir=${prefix}/lib" >> configparms
+    echo "rtlddir=${prefix}/lib" >> configparms
+    echo "sbindir=${prefix}/bin" >> configparms
+    echo "rootsbindir=${prefix}/bin" >> configparms
+
+    if [ "${JINX_ARCH}" = x86_64 ]; then
+        _cet=--enable-cet
+    fi
+
+    autotools_configure \
+        ${_cet-} \
+        --with-headers=${sysroot}${prefix}/include \
+        --with-bugurl=https://github.com/tuna4ll/tulpar/issues \
+        --enable-bind-now \
+        --enable-fortify-source \
+        --enable-stack-protector=strong \
+        --disable-nscd \
+        --disable-profile \
+        --disable-timezone-tools \
+        --disable-werror
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    install_hook_add 'locale-gen'
+    generate_info_hooks
+}

@@ -1,0 +1,24 @@
+#! /bin/sh
+
+repology_id=expat
+version=2.10.0
+fixed_version=$(echo ${version} | sed 's/\./_/g')
+revision=1
+tarball_url="https://github.com/libexpat/libexpat/releases/download/R_${fixed_version}/expat-${version}.tar.gz"
+tarball_blake2b="fdcf5e11dc084e8462ec97d7b141368b981d20b4004f896482aef3db0240ea8ce1ec3d3bfd243d72c97877b2ce3afa78ba96f62012818c42c3c343831603a332"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

@@ -1,0 +1,32 @@
+#! /bin/sh
+
+version=9.12
+revision=1
+tarball_url="https://ftp.gnu.org/gnu/coreutils/coreutils-${version}.tar.xz"
+tarball_blake2b="c9c5f1a72b46060ad5a96abfa084e3dd2f9f964f3178a66ed57bbe0e037fe769dc1ac574e66bec1ec0b8a8d8b43f2fc00e11dca50fa7c492f0d5b4b53ece6b39"
+hostdeps="gcc pkg-config"
+deps="core-libs gmp openssl texinfo"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    FORCE_UNSAFE_CONFIGURE=1 \
+    gl_cv_host_operating_system="GNU/Tunix" \
+    autotools_configure \
+        --with-openssl \
+        --enable-install-program=hostname
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+
+    generate_info_hooks
+}

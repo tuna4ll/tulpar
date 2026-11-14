@@ -1,0 +1,33 @@
+#! /bin/sh
+
+version=1.15
+revision=2
+tarball_url="https://ftp.gnu.org/gnu/gzip/gzip-${version}.tar.xz"
+tarball_blake2b="efa81df3df766502c5ffde551570b568c73d3b2ad0b2c76bd79b0ed5cea4deb5e0a3d803b942a078efdc4df9cde355863aadc51752498a9e7dec8737be559850"
+hostdeps="gcc pkg-config"
+deps="core-libs texinfo"
+
+prepare() {
+    autotools_recursive_regen
+
+    # arm64's asm/sigcontext.h, reached through <signal.h>, has a field named
+    # head, which gzip.h defines as a macro; read the header before that.
+    checked_subst 's/\n#include <config.h>\n/\n#include <config.h>\n#include <signal.h>\n/' gzip.c
+}
+
+configure() {
+        ac_cv_prog_LESS=less \
+    autotools_configure
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+
+    generate_info_hooks
+}

@@ -1,0 +1,25 @@
+#! /bin/sh
+
+version=1.4
+revision=1
+tarball_url="https://zlib.net/zlib-${version}.tar.xz"
+tarball_blake2b="2564e092d3daf5c727eddab8785cccf64275d8d534cce96ba6d21fa5c891a135ff5c9b21685a5c549f2c1c790b4ec3ed11449f9bc3da7f5df6b930c4b2f45f03"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    cmake_configure \
+        -DCMAKE_INSTALL_DOCDIR=share/doc \
+        -DZLIB_BUILD_STATIC=OFF \
+        -DZLIB_BUILD_TESTING=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

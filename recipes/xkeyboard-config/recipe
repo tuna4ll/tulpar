@@ -1,0 +1,24 @@
+#! /bin/sh
+
+version=2.49
+revision=1
+tarball_url="https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config/-/archive/xkeyboard-config-${version}/xkeyboard-config-xkeyboard-config-${version}.tar.gz"
+tarball_blake2b="acfb401ba8bcb2378218665e9512489c405f7ab36e63a6e5b16e5eb2c8f2b3925ba4451c6433c202b07f21fcfc484b490b0cc10439a44c786f909177f83b40c5"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    meson_configure \
+        -Dcompat-rules=true \
+        -Dxorg-rules-symlinks=true
+}
+
+build() {
+    meson compile --verbose -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}

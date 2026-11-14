@@ -1,0 +1,61 @@
+#! /bin/sh
+
+version=21.1.25
+revision=1
+tarball_url="https://www.x.org/archive/individual/xserver/xorg-server-${version}.tar.xz"
+tarball_blake2b="5f557d291eb020d913671f6713835e29e0cb66377c77fb1197605fba655d7d6077ecd498635d4c93c6481559243d4e6a9573af341ba27b04b483dc2807d03607"
+hostdeps="gcc pkg-config"
+conf_files="/etc/X11/Xwrapper.config"
+deps="core-libs libdrm libpciaccess xorg-proto libxfont2 libxcvt libxau libxdmcp nettle pixman xorg-xkbcomp xkeyboard-config"
+builddeps="xorg-util-macros xtrans xcb-proto libxcb xcb-util libxkbfile libxshmfence"
+
+configure() {
+    # Server modules (modesetting, fbdevhw) use symbols of modules loaded
+    # after them (shadow), so they must not be linked with -z now.
+    TARGET_LDFLAGS="${TARGET_LDFLAGS/-Wl,-z,now/-Wl,-z,lazy}" \
+    meson_configure \
+        -Dxf86-input-inputtest=false \
+        -Dxkb_bin_dir=${prefix}/bin \
+        -Dxkb_dir=${prefix}/share/X11/xkb \
+        -Dxkb_output_dir=/var/lib/xkb \
+        -Dxkb_default_rules=base \
+        -Ddefault_font_path=${prefix}/share/fonts/misc,${prefix}/share/fonts/TTF,${prefix}/share/fonts/OTF,${prefix}/share/fonts/Type1,${prefix}/share/fonts/100dpi,${prefix}/share/fonts/75dpi \
+        -Dxorg=true \
+        -Dxvfb=true \
+        -Dxcsecurity=true \
+        -Dxephyr=false \
+        -Dxnest=false \
+        -Dsuid_wrapper=true \
+        -Dpciaccess=true \
+        -Dsystemd_logind=false \
+        -Dsecure-rpc=false \
+        -Dudev=false \
+        -Dudev_kms=false \
+        -Ddri1=false \
+        -Ddri2=false \
+        -Ddri3=false \
+        -Dint10=false \
+        -Dvgahw=false \
+        -Ddrm=true \
+        -Dglamor=false \
+        -Dglx=false
+}
+
+build() {
+    meson compile --verbose -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    install -Dm644 "${source_dir}"/xkb/README.compiled \
+        "${dest_dir}"/var/lib/xkb/README.compiled
+
+    post_package_strip
+
+    # Tunix lets only root become DRM master and there is no logind, so the
+    # server starts through the setuid wrapper.
+    chmod 4755 "${dest_dir}${prefix}"/libexec/Xorg.wrap
+    mkdir -p "${dest_dir}"/etc/X11
+    printf 'needs_root_rights = yes\nallowed_users = anybody\n' >"${dest_dir}"/etc/X11/Xwrapper.config
+}

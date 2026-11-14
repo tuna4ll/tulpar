@@ -1,0 +1,20 @@
+#! /bin/sh
+
+version=1.0.3
+revision=1
+tarball_url="https://github.com/illiliti/libudev-zero/archive/refs/tags/${version}.tar.gz"
+tarball_blake2b="654eeea8fccc1ea842e2c171bd77a659784e8fab479d60fbbff1bfe93177097da29220f2ca15937d9a51000266514b40031d92ae3a336c4d48cae11c5572f90a"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+build() {
+    cp -rp "${source_dir}"/. ./
+    make -j${parallelism} CC=${OS_TRIPLET}-gcc AR=${OS_TRIPLET}-ar \
+        CFLAGS="$TARGET_CFLAGS" LDFLAGS="$TARGET_LDFLAGS" PREFIX=${prefix}
+}
+
+package() {
+    make install-shared DESTDIR="${dest_dir}" PREFIX=${prefix}
+
+    post_package_strip
+}

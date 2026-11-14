@@ -1,0 +1,30 @@
+#! /bin/sh
+
+version=4.20.3
+revision=1
+tarball_url="https://github.com/shadow-maint/shadow/releases/download/${version}/shadow-${version}.tar.gz"
+tarball_blake2b="5de79a6bd94ff59fbd783c96ce9c1e481578ce86cc73a08c4a0b1b36e519586ee085a3b586d9a79f3f5e1faa0455689dec5c393af82566cce400cd7035d7166d"
+hostdeps="gcc pkg-config"
+deps="core-libs libbsd"
+conf_files="/etc/login.defs"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure \
+        --enable-man \
+        --with-yescrypt \
+        --disable-logind
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install usbindir="${prefix}/bin"
+
+    post_package_strip
+}

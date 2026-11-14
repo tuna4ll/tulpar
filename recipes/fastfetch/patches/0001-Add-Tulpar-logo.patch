@@ -1,0 +1,49 @@
+diff --git a/src/logo/ascii/t.inc b/src/logo/ascii/t.inc
+index 3adf4784a..0dcc2ad4c 100644
+--- a/src/logo/ascii/t.inc
++++ b/src/logo/ascii/t.inc
+@@ -122,6 +122,18 @@ static const FFlogo T[] = {
+         .colorTitle = FF_COLOR_FG_256 "32",
+     },
+     #endif
++    #ifdef FASTFETCH_DATATEXT_LOGO_TULPAR
++    // Tulpar
++    {
++        .names = { "Tulpar" },
++        .lines = FASTFETCH_DATATEXT_LOGO_TULPAR,
++        .colors = {
++            FF_COLOR_FG_RGB "148;202;242",
++        },
++        .colorKeys = FF_COLOR_FG_RGB "148;202;242",
++        .colorTitle = FF_COLOR_FG_RGB "148;202;242",
++    },
++    #endif
+     #ifdef FASTFETCH_DATATEXT_LOGO_TURKISH
+     // Turkish
+     {
+diff --git a/src/logo/ascii/t/tulpar.txt b/src/logo/ascii/t/tulpar.txt
+new file mode 100644
+index 000000000..161001a24
+--- /dev/null
++++ b/src/logo/ascii/t/tulpar.txt
+@@ -0,0 +1,20 @@
++               *=
++          @##%#:-%%@@
++#-%       @%*%%::%@%#=@            %+*
++%-:.#    %#%%-..:.@#%#         @#:---%
++*--::.-#@%%%:.+@:...%%@    @+:..---**#
++%+-..-::*#%--......+%%   %:.::.-:::-=%
++%-::---:*#%..-..:...:%@ %..::.:..-=%*
++ %+:.:::-%%...:-=::%%## =.::.:...:--%
++  *-..-::%%.....-%%%##%=..:..---=%%
++    *-----%.......%%*-::-:.:---=*%
++      +--#.........:=----=----*%
++       @+...........:--=-+=%@%%%%%
++         +=....:....:::..--@%%%%%%
++        #..+--:-....-:-....#%%%%*%@
++        *..-*%**...+-=*:...=%%%%#=+*%
++       %...+   =..-==# %=----*%#%%++#@
++       +..-+  @...-==*    #..:%%*+*#@
++      +...-#  +...-=-@     :..:#
++     %#%%=+# %*#+:-%%@     *%%#*
++    @%%@@@  @#%%%%%       @%%%@@

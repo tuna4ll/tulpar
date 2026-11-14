@@ -1,0 +1,26 @@
+#! /bin/sh
+
+version=0.9.13
+revision=1
+tarball_url="https://www.x.org/archive/individual/lib/libXrender-${version}.tar.gz"
+tarball_blake2b="7b0d5bead545994fca6ed68855b36fb6ca85c248c084f9902feaac727ee3ade492ac54cfcb7f5912e1802a895922bf0791a8e139ac09c5d6e920c4bb91316a49"
+hostdeps="gcc pkg-config"
+deps="core-libs xorg-proto libx11"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

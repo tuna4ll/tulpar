@@ -1,0 +1,3 @@
+#!/bin/sh
+# agetty must lead its own session to take tty2 as its controlling terminal.
+exec setsid agetty --noclear tty2 38400 linux

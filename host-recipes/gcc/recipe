@@ -1,0 +1,79 @@
+#! /bin/sh
+
+from_source=gcc
+revision=1
+clean_workdirs=no
+imagedeps="build-essential pkg-config libmpfr-dev libgmp-dev libisl-dev libmpc-dev"
+imagerundeps="libmpfr6 libgmp10 libisl23 libmpc3"
+hostdeps="pkg-config"
+hostrundeps="binutils"
+deps="glibc"
+
+_glibc_version="$(. "${base_dir}/recipes/glibc/recipe" && echo "${version}")"
+
+configure() {
+    mkdir -p build && cd build
+
+        CFLAGS="$HOST_CFLAGS" \
+        CXXFLAGS="$HOST_CXXFLAGS" \
+        LDFLAGS="$HOST_LDFLAGS" \
+        CFLAGS_FOR_TARGET="$TARGET_CFLAGS -g" \
+        CXXFLAGS_FOR_TARGET="$TARGET_CXXFLAGS -g" \
+        LDFLAGS_FOR_TARGET="$TARGET_LDFLAGS" \
+    "${source_dir}"/configure \
+        --prefix="${prefix}" \
+        --target=${OS_TRIPLET} \
+        --with-sysroot="${sysroot}" \
+        --with-glibc-version=${_glibc_version} \
+        --enable-__cxa_atexit \
+        --disable-fixincludes \
+        --with-gcc-major-version-only \
+        --with-linker-hash-style=gnu \
+        --enable-cet=auto \
+        --enable-checking=release \
+        --enable-clocale=gnu \
+        --enable-default-pie \
+        --enable-default-ssp \
+        --enable-gnu-indirect-function \
+        --enable-gnu-unique-object \
+        --enable-libstdcxx-backtrace \
+        --enable-link-serialization=1 \
+        --enable-linker-build-id \
+        --enable-languages=c,c++,lto,m2 \
+        --enable-lto \
+        --disable-multilib \
+        --enable-plugin \
+        --enable-shared \
+        --enable-host-shared \
+        --enable-threads=posix \
+        --disable-libssp \
+        --disable-libstdcxx-pch \
+        --disable-silent-rules \
+        --disable-werror
+}
+
+build() {
+    cd build
+
+    make -j${parallelism} all-gcc
+
+    make -j${parallelism} all-target-libgcc
+    make -j${parallelism} configure-target-libstdc++-v3 configure-target-libatomic configure-target-libgm2
+    make -j${parallelism} all-target-libstdc++-v3
+    make -j${parallelism} all-target-libatomic
+    # Mosaic is written in Modula-2.
+    make -j${parallelism} all-target-libgm2
+}
+
+package() {
+    cd build
+    DESTDIR="${dest_dir}" make install-gcc
+
+    DESTDIR="${dest_dir}" make install-target-libgcc
+    DESTDIR="${dest_dir}" make install-target-libstdc++-v3
+    DESTDIR="${dest_dir}" make install-target-libatomic
+    DESTDIR="${dest_dir}" make install-target-libgm2
+
+        strip_command=strip \
+    post_package_strip
+}

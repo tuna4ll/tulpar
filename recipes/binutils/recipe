@@ -1,0 +1,53 @@
+#! /bin/sh
+
+version=2.47
+revision=4
+tarball_url="https://ftp.gnu.org/gnu/binutils/binutils-${version}.tar.xz"
+tarball_blake2b="329cae8792c500c71d8cce03aab127e8d77f1d409f74872082e64df5163e5c730fe585f8f9c21905cb6227cae18e6675ae4caed653223a26b5d9d4fdb90910ea"
+imagedeps="build-essential"
+hostdeps="gcc pkg-config"
+deps="core-libs zlib zstd texinfo"
+
+prepare() {
+    checked_subst 's/\ndevelopment=true\n/\ndevelopment=false\n/' bfd/development.sh
+
+    autotools_recursive_regen
+}
+
+configure() {
+    if [ "${JINX_ARCH}" = x86_64 ]; then
+        _arch_flags="--enable-cet --enable-targets=x86_64-pep"
+    fi
+
+    autotools_configure \
+        ${_arch_flags-} \
+        --target=${OS_TRIPLET} \
+        --with-sysroot= \
+        --with-build-sysroot=${sysroot} \
+        --enable-separate-code \
+        --enable-colored-disassembly \
+        --enable-default-execstack=no \
+        --enable-deterministic-archives \
+        --enable-ld=default \
+        --enable-new-dtags \
+        --enable-plugins \
+        --enable-relro \
+        --enable-threads \
+        --disable-werror \
+        --with-pic \
+        --with-system-zlib
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make tooldir="${prefix}" install
+
+    rm -f "${dest_dir}${prefix}"/share/man/man1/{dlltool,windres,windmc}.1
+
+    post_package_strip
+
+    generate_info_hooks
+}

@@ -1,0 +1,36 @@
+#! /bin/sh
+
+version=9.3
+revision=1
+tarball_url="https://ftp.gnu.org/gnu/nano/nano-${version}.tar.xz"
+tarball_blake2b="fc1ad405e70086cd37e88e09d78891023b514c2b9a0ab724d7bcef2063f1503d4beb38f1cf5a50df52b8abec9acf8f718c57ab68f01686d6a95a167e96776b34"
+hostdeps="gcc pkg-config"
+deps="core-libs ncurses file texinfo"
+conf_files="/etc/nanorc"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+        gl_cv_func_strcasecmp_works=yes \
+    autotools_configure \
+        --enable-color \
+        --enable-multibuffer \
+        --enable-nanorc
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    mkdir -p "${dest_dir}"/etc
+    cp -v "${recipe_dir}"/nanorc "${dest_dir}"/etc/
+
+    post_package_strip
+
+    generate_info_hooks
+}

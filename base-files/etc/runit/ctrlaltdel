@@ -1,0 +1,3 @@
+#!/bin/sh
+# Ctrl+Alt+Del reboots.
+chmod 100 /run/runit/stopit /run/runit/reboot

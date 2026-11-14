@@ -1,0 +1,20 @@
+#! /bin/sh
+
+skip_pkg_check=yes
+version=0.0
+revision=9
+source_dir="base-files"
+deps="core-libs"
+conf_files="/etc/group /etc/locale.conf /etc/locale.gen /etc/nsswitch.conf /etc/passwd"
+conf_files="${conf_files} /etc/profile /etc/resolv.conf /etc/shadow"
+conf_files="${conf_files} /etc/fstab /etc/hostname /etc/hosts /etc/xbps.d/00-repository-main.conf /etc/X11/xorg.conf.d/10-tulpar.conf"
+conf_files="${conf_files} /home/tulpar/.bash_profile /home/tulpar/.bashrc /home/tulpar/.xinitrc"
+
+package() {
+    cp -r ${source_dir}/. "${dest_dir}"/
+
+    install_hook_add 'chown -R 1000:1000 home/tulpar' \
+                     'chmod 750 root' \
+                     'chmod -R 1777 tmp' \
+                     'chmod 710 home/tulpar'
+}

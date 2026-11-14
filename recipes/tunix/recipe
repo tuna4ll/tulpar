@@ -1,0 +1,49 @@
+#! /bin/sh
+
+skip_pkg_check=yes
+version=0.1.0git
+revision=4
+git_url="https://github.com/tuna4ll/tunix.git"
+commit=6802b2a1cb35ed7bcf713667f750a414cac4cc30
+source_imagedeps="curl git ca-certificates"
+imagedeps="build-essential gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu"
+deps="kmod"
+
+# Must match UTS_RELEASE in include/tunix/uts.h; it names the module directory.
+_release=0.1.0
+
+early_prepare() {
+    # Limine's header, uACPI and the pinned Rust toolchain are fetched here,
+    # where there is network, and reused by build() from the source tree.
+    # rustup's own downloader stalls in the Jinx container; curl does not.
+    RUSTUP_USE_CURL=1 make fetch
+}
+
+build() {
+    case "${JINX_ARCH}" in
+        x86_64) _targets="kernel modules" ;;
+        aarch64) _targets="aarch64-core" ;;
+    esac
+
+    make -C "${source_dir}" -j${parallelism} \
+        BUILD="$(pwd -P)" \
+        LIMINE_DIR="${source_dir}/build/limine" \
+        UACPI_DIR="${source_dir}/build/uacpi" \
+        RUST_HOME="${source_dir}/build/rust" \
+        ${_targets}
+}
+
+package() {
+    if [ "${JINX_ARCH}" = aarch64 ]; then
+        # An arm64 Image, which Limine boots with the Linux protocol.
+        install -Dm644 kernel-aarch64-core.img "${dest_dir}${prefix}"/share/tunix/Image
+        return
+    fi
+
+    install -Dm644 kernel.elf "${dest_dir}${prefix}"/share/tunix/kernel.elf
+
+    mkdir -p "${dest_dir}${prefix}"/lib/modules/${_release}/kernel
+    find modules -name '*.ko' -exec install -m644 -t "${dest_dir}${prefix}"/lib/modules/${_release}/kernel {} +
+
+    install_hook_add "depmod ${_release}"
+}

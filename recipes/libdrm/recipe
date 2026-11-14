@@ -1,0 +1,38 @@
+#! /bin/sh
+
+version=2.4.128
+revision=1
+tarball_url="https://dri.freedesktop.org/libdrm/libdrm-${version}.tar.xz"
+tarball_blake2b="29c128197f94be9f52e79c5a775026f56f0218323c57ef6b2d15a8bdbb1e27e127e3bb41b903a9300daa969897058763d89b084403eb550fd1212cb7f1a77e71"
+hostdeps="gcc pkg-config"
+deps="core-libs libpciaccess"
+
+configure() {
+    # Tunix's DRM is a generic KMS device with dumb buffers; no GPU drivers.
+    meson_configure \
+        -Dintel=disabled \
+        -Dradeon=disabled \
+        -Damdgpu=disabled \
+        -Dnouveau=disabled \
+        -Dvmwgfx=disabled \
+        -Domap=disabled \
+        -Dexynos=disabled \
+        -Dfreedreno=disabled \
+        -Dtegra=disabled \
+        -Dvc4=disabled \
+        -Detnaviv=disabled \
+        -Dcairo-tests=disabled \
+        -Dman-pages=disabled \
+        -Dvalgrind=disabled \
+        -Dtests=false
+}
+
+build() {
+    meson compile --verbose -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}

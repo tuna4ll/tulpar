@@ -1,0 +1,20 @@
+#! /bin/sh
+
+skip_pkg_check=yes
+version="$(. "${base_dir}/recipes/gcc/recipe" && echo ${version})"
+revision=1
+hostdeps="gcc pkg-config"
+imagedeps="build-essential"
+deps="glibc libgcc libstdc++"
+
+package() {
+    cd "${build_dir}"/host-builds/gcc/build
+
+    rm -rf tmp_libgm2_dir
+    mkdir tmp_libgm2_dir
+
+    DESTDIR="$(realpath tmp_libgm2_dir)" make install-target-libgm2
+
+    mkdir -p "${dest_dir}${prefix}"
+    cp -r tmp_libgm2_dir/usr/local/${OS_TRIPLET}/* "${dest_dir}${prefix}"/
+}

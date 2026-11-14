@@ -1,0 +1,46 @@
+#! /bin/sh
+
+version=10.5.2
+revision=1
+tarball_url="https://github.com/NetworkConfiguration/dhcpcd/releases/download/v${version}/dhcpcd-${version}.tar.xz"
+tarball_blake2b="5852f07fc163137ec5e3224a7043de9b792551f13509bb20b5740be77f08280335eeb92cd22f98fb40a2d527d4190fffcda9ddde009412aad62f286ad069ebb4"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    # dhcpcd's own configure only builds in its source tree.
+    cp -rp "${source_dir}"/. ./
+
+    # Tunix has no IPv6 and no seccomp; privsep would need a dhcpcd user.
+        CC=${OS_TRIPLET}-gcc \
+        CFLAGS="${TARGET_CFLAGS}" \
+        LDFLAGS="${TARGET_LDFLAGS}" \
+    ./configure \
+        --host=${OS_TRIPLET} \
+        --prefix=${prefix} \
+        --sbindir=${prefix}/bin \
+        --libexecdir=${prefix}/lib/dhcpcd \
+        --sysconfdir=/etc \
+        --dbdir=/var/lib/dhcpcd \
+        --runstatedir=/run \
+        --disable-inet6 \
+        --disable-privsep \
+        --without-udev
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    make DESTDIR="${dest_dir}" install
+
+    install -Dm755 /dev/stdin "${dest_dir}"/etc/sv/dhcpcd/run <<'RUN'
+#!/bin/sh
+exec dhcpcd -B -q
+RUN
+    mkdir -p "${dest_dir}"/etc/runit/runsvdir/default
+    ln -s /etc/sv/dhcpcd "${dest_dir}"/etc/runit/runsvdir/default/dhcpcd
+
+    post_package_strip
+}

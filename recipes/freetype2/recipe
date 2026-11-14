@@ -1,0 +1,26 @@
+#! /bin/sh
+
+repology_id=freetype
+version=2.15.0
+revision=1
+tarball_url="https://download-mirror.savannah.gnu.org/releases/freetype/freetype-${version}.tar.xz"
+tarball_blake2b="b49bbcf6eae90159b8c3f315a8175d23a0c6a8f8574361aaff1b05d19984b31c000c1d637ba128e6f2f09d984d583f36cc7dd84e196152214f6fc8bed20e810d"
+hostdeps="gcc pkg-config"
+deps="core-libs bzip2 libpng brotli zlib"
+
+configure() {
+    meson_configure \
+        -Derror_strings=true \
+        -Dharfbuzz=dynamic \
+        -Dhvf=disabled
+}
+
+build() {
+    meson compile --verbose -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}

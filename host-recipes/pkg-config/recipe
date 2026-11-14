@@ -1,0 +1,39 @@
+#! /bin/sh
+
+from_source=pkg-config
+revision=4
+imagedeps="build-essential"
+
+configure() {
+        CFLAGS="$HOST_CFLAGS" \
+        CXXFLAGS="$HOST_CXXFLAGS" \
+        LDFLAGS="$HOST_LDFLAGS" \
+    meson setup "${source_dir}" \
+        --prefix="${prefix}" \
+        --libdir=lib \
+        --sbindir=bin \
+        --buildtype=release \
+        --wrap-mode=nodownload \
+        -Ddefault_library=shared \
+        -Db_ndebug=true
+}
+
+build() {
+    meson compile --verbose -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+    mkdir -p "${dest_dir}${prefix}/share/pkgconfig/personality.d"
+    cat <<EOF >"${dest_dir}${prefix}/share/pkgconfig/personality.d/${OS_TRIPLET}.personality"
+Triplet: ${OS_TRIPLET}
+SysrootDir: ${sysroot}
+DefaultSearchPaths: ${sysroot}/usr/lib/pkgconfig:${sysroot}/usr/share/pkgconfig
+SystemIncludePaths: ${sysroot}/usr/include
+SystemLibraryPaths: ${sysroot}/usr/lib
+EOF
+    mv "${dest_dir}${prefix}/bin/pkgconf" "${dest_dir}${prefix}/bin/${OS_TRIPLET}-pkg-config"
+
+        strip_command=strip \
+    post_package_strip
+}

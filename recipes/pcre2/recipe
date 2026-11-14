@@ -1,0 +1,26 @@
+#! /bin/sh
+
+version=10.49
+revision=1
+tarball_url="https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${version}/pcre2-${version}.tar.bz2"
+tarball_blake2b="9286396718d4e26c7a504134f774ffa3bde6a1e07ea6fef05afbea9a0a2f35d79c2391fea0ee58e76c3ea59a684b66c171872e88bb13f3403edaa34e02624d84"
+hostdeps="gcc pkg-config"
+deps="core-libs bzip2 zlib"
+
+configure() {
+    cmake_configure \
+        -DPCRE2_BUILD_PCRE2_16=ON \
+        -DPCRE2_BUILD_PCRE2_32=ON \
+        -DPCRE2_SUPPORT_JIT=ON \
+        -DPCRE2_BUILD_TESTS=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

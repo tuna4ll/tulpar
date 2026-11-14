@@ -1,0 +1,26 @@
+#! /bin/sh
+
+version=0.0git
+revision=1
+git_url="https://github.com/tuna4ll/mosaic.git"
+commit=b77f66c380d05913462788cf291ef62a060dd537
+hostdeps="gcc pkg-config"
+deps="core-libs libgm2 libx11 libxft imlib2 st xorg-xinit ttf-dejavu"
+
+build() {
+    cp -rp "${source_dir}"/. ./
+
+    make -j${parallelism} \
+        GM2=${OS_TRIPLET}-gm2 \
+        CC=${OS_TRIPLET}-gcc \
+        PKG_CONFIG=${OS_TRIPLET}-pkg-config \
+        M2FLAGS="-O2 -g -Wall" \
+        CFLAGS="$TARGET_CFLAGS -Wall -Wextra" \
+        LDFLAGS="$TARGET_LDFLAGS"
+}
+
+package() {
+    make install PREFIX=${prefix} DESTDIR="${dest_dir}"
+
+    post_package_strip
+}

@@ -1,0 +1,3 @@
+# Tunix mounts / (root=), /proc, /sys and /dev itself.
+tmpfs /tmp     tmpfs rw 0 0
+tmpfs /run     tmpfs rw 0 0

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Stage 3: stop services and everything else, then let runit halt or reboot.
+PATH=/usr/bin
+
+sv -w 10 force-stop /var/service/*
+sv exit /var/service/*
+kill -TERM -1; sleep 1; kill -KILL -1
+sync
+umount -a -r

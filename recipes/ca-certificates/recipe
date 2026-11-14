@@ -1,0 +1,16 @@
+#! /bin/sh
+
+skip_pkg_check=yes
+version=20250419
+revision=2
+imagedeps="ca-certificates openssl"
+deps="core-libs"
+
+package() {
+    # shortcut: Mozilla's bundle as Debian ships it in the build container; build it from certdata.txt if it ever has to track upstream on its own.
+    mkdir -p "${dest_dir}"/etc/ssl/certs
+    cp -L /etc/ssl/certs/*.pem /etc/ssl/certs/ca-certificates.crt "${dest_dir}"/etc/ssl/certs/
+    # xbps' libfetch only reads the hashed directory, not a bundle.
+    openssl rehash "${dest_dir}"/etc/ssl/certs
+    ln -s certs/ca-certificates.crt "${dest_dir}"/etc/ssl/cert.pem
+}

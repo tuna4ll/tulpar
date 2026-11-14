@@ -1,0 +1,44 @@
+#! /bin/sh
+
+version=0.60.7
+revision=6
+git_url="https://github.com/void-linux/xbps.git"
+commit=34e6a1a1a9917c881246ef538e312a3fc0228ed2
+hostdeps="gcc pkg-config"
+deps="core-libs libarchive openssl zlib"
+
+configure() {
+    cp -rp "${source_dir}"/. ./
+
+    # configure runs a bare pkg-config, which must be the cross one.
+    mkdir -p .shim
+    # (a script, not a symlink: pkgconf picks its personality from its name)
+    printf '#!/bin/sh\nexec %s-pkg-config "$@"\n' "${OS_TRIPLET}" >.shim/pkg-config
+    chmod +x .shim/pkg-config
+    export PATH="$(pwd -P)/.shim:${PATH}"
+
+        CFLAGS="$TARGET_CFLAGS -Wno-error" \
+        LDFLAGS="$TARGET_LDFLAGS" \
+    ./configure \
+        --verbose \
+        --host=${OS_TRIPLET} \
+        --prefix="${prefix}" \
+        --sysconfdir=/etc
+}
+
+build() {
+    make -j${parallelism} \
+        AR="${OS_TRIPLET}-ar" \
+        RANLIB="${OS_TRIPLET}-ranlib"
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    rm "${dest_dir}${prefix}"/lib/*.a
+
+    # Change architecture for the main repository as needed.
+    sed -i "s/ARCH_HERE/${JINX_ARCH}/g" "${dest_dir}${prefix}"/share/xbps.d/00-repository-main.conf
+
+    post_package_strip
+}

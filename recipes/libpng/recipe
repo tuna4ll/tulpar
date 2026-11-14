@@ -1,0 +1,33 @@
+#! /bin/sh
+
+version=1.6.59
+revision=1
+tarball_url="https://prdownloads.sourceforge.net/libpng/libpng-${version}.tar.xz"
+tarball_blake2b="f2656b0d9a3865faf957e8600a7617516d9139d15c6d7581c06b4829b4c9338ec5f747e4ccfcc49b6b9f5a96f0476121eda99457469c8e1cfecd8ecc3b1697ed"
+hostdeps="gcc pkg-config"
+deps="core-libs zlib"
+
+configure() {
+    cmake_configure \
+        -DPNG_STATIC=OFF \
+        -DPNG_TESTS=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    cp -rp "${source_dir}"/contrib/pngminus ./pngminus
+    make -C pngminus -j${parallelism} png2pnm pnm2png \
+        CC="${OS_TRIPLET}-gcc" \
+        CFLAGS="${TARGET_CFLAGS}" \
+        LDFLAGS="${TARGET_LDFLAGS}" \
+        PNGINC="-I${source_dir} -I$(pwd)" \
+        PNGLIB_SHARED="-L${dest_dir}${prefix}/lib -lpng"
+    install -v -m755 pngminus/png2pnm pngminus/pnm2png "${dest_dir}${prefix}"/bin
+
+    post_package_strip
+}
