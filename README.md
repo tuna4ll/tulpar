@@ -22,9 +22,16 @@ Tulpar is built for x86_64 and aarch64 as a disk image, `tulpar.img`, with an
 EFI system partition holding Limine and the kernel and an ext4 root. Tunix
 mounts its root from disk and has no initramfs, so there is no live ISO.
 
+Prebuilt images for both architectures are attached to every
+[release](https://github.com/tuna4ll/tulpar/releases), compressed with zstd:
+
+```bash
+zstd -d tulpar-0.1.0-x86_64.img.zst -o build-x86_64/tulpar.img
+```
+
 ### On virtual machines
 
-With a locally built image, one can run it in QEMU with:
+With a downloaded or locally built image, one can run it in QEMU with:
 
 ```bash
 make run
