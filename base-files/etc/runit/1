@@ -9,4 +9,9 @@ install -m000 /dev/null /run/runit/stopit
 install -m000 /dev/null /run/runit/reboot
 
 hostname "$(cat /etc/hostname)"
+
 tulpar-first-boot
+
+# There is no udev, so load the drivers for the devices present at boot here,
+# after the first boot's hooks have run depmod.
+cat /sys/bus/pci/devices/*/modalias 2>/dev/null | sort -u | xargs -r modprobe -q -a -b 2>/dev/null || :
