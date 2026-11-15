@@ -1,0 +1,25 @@
+#! /bin/sh
+
+repology_id=nghttp2
+version=1.71.0
+revision=1
+tarball_url="https://github.com/nghttp2/nghttp2/releases/download/v${version}/nghttp2-${version}.tar.xz"
+tarball_blake2b="30f1d5b1309fd5e9e87a9d738a5995b894b3450bdd3a4f813d7f202819a15e66779218b619705c3854fbd63b7e6644a32b6dd55839d490eb46ac2adb1f3d6eef"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    cmake_configure \
+        -DENABLE_LIB_ONLY=ON \
+        -DENABLE_DOC=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

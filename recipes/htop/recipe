@@ -1,0 +1,22 @@
+#! /bin/sh
+
+version=3.5.3
+revision=1
+tarball_url="https://github.com/htop-dev/htop/releases/download/${version}/htop-${version}.tar.xz"
+tarball_blake2b="6861dcd32f6df4d0d1385f0196714947fb3d2930e96297715542501889356bb748d7de60eb15208e053f254f85a2f67f498001761f561924bdf0baebda5a5595"
+hostdeps="gcc pkg-config"
+deps="core-libs ncurses"
+
+configure() {
+    autotools_configure
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

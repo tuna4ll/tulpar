@@ -1,0 +1,15 @@
+#! /bin/sh
+
+version=6.20
+revision=3
+tarball_url="https://mirrors.edge.kernel.org/pub/linux/docs/man-pages/man-pages-${version}.tar.xz"
+tarball_blake2b="fb82ec26eee72af1e31dc25a8b2eb1a049805e777d9d0f03955909bfa301233695b4e12a821d3d342df9e506a44d0c78c59b76f1dcf28cc1317de309ad74e4ab"
+deps="man-db"
+
+package() {
+    cp -rp "${source_dir}"/. ./
+    make -R GIT=false prefix=${prefix} DESTDIR="${dest_dir}" install
+    # libxcrypt, shadow and tzdata ship these pages themselves.
+    cd "${dest_dir}${prefix}"/share/man
+    rm -f man3/crypt* man3/getspnam.3 man5/passwd.5 man5/tzfile.5 man8/tzselect.8 man8/zdump.8 man8/zic.8
+}

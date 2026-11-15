@@ -1,0 +1,43 @@
+#! /bin/sh
+
+version=2.3.0
+revision=1
+tarball_url="https://ftp.gnu.org/gnu/wget/wget2-${version}.tar.gz"
+tarball_blake2b="10e3ae64283209a30b0f9734275d86ea604909ce258edbc10bbc63fe236f725cfc9d304dfe31b55d160ed9e399e8f7ec4d507d95444574c93903eee10fed634c"
+imagedeps="gperf"
+hostdeps="gcc pkg-config"
+deps="core-libs gnutls brotli libidn2 libnghttp2 libpsl pcre2 zlib zstd"
+conf_files="/etc/wget2rc"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    mkdir "${dest_dir}/etc"
+    cat >> "${dest_dir}/etc/wget2rc" << EOF
+
+# default root certs location
+ca_certificate=/etc/ssl/certs/ca-certificates.crt
+EOF
+
+    rm -f "${dest_dir}${prefix}"/bin/wget2_noinstall
+
+    ln -s wget2 "${dest_dir}${prefix}"/bin/wget
+
+    install -Dm644 "${source_dir}"/docs/man/man1/wget2.1 \
+        "${dest_dir}${prefix}"/share/man/man1/wget2.1
+    ln -s wget2.1 "${dest_dir}${prefix}"/share/man/man1/wget.1
+
+    post_package_strip
+}

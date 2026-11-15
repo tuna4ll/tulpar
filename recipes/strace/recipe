@@ -1,0 +1,25 @@
+#! /bin/sh
+
+version=7.3
+revision=1
+tarball_url="https://github.com/strace/strace/releases/download/v${version}/strace-${version}.tar.xz"
+tarball_blake2b="ecc2379823c73d98d281bb750c80dd0ff21e154be83d450de4ffa0ae20f78d28f1e8434c36d57a59ba24b586e51668e4dbbce60272ce145c3527224a25395695"
+imagedeps="build-essential"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    # Decoding 32-bit personalities needs a multilib toolchain, which Tulpar has not.
+    autotools_configure \
+        --enable-mpers=no
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

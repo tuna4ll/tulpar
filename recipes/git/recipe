@@ -1,0 +1,49 @@
+#! /bin/sh
+
+version=2.56.1
+revision=1
+tarball_url="https://www.kernel.org/pub/software/scm/git/git-${version}.tar.xz"
+tarball_blake2b="21ebca20f19268b9a17ab28e855dbc5d6fd46d41203139a3c800ae8e0ea594e8e21d6f5ea4220e1cac0de6d893202a6c4217e226100787402c066015de9f9bc7"
+imagedeps="build-essential asciidoc"
+hostdeps="gcc pkg-config"
+deps="core-libs python zlib curl openssl openssh libexpat pcre2"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    cp -rp ${source_dir}/. .
+
+        configure_script_path=./configure \
+        ac_cv_iconv_omits_bom=yes \
+        ac_cv_fread_reads_directories=no \
+        ac_cv_snprintf_returns_bogus=no \
+    autotools_configure \
+        CFLAGS="$TARGET_CFLAGS" \
+        --with-gitconfig=/etc/gitconfig \
+        --with-libpcre2 \
+        --with-python=/usr/bin/python3
+}
+
+build() {
+    make -j${parallelism} V=1 NO_RUST=1 CURL_CONFIG="${sysroot}${prefix}"/bin/curl-config
+    make -j${parallelism} V=1 man
+
+    make -j${parallelism} V=1 -C contrib/subtree all man
+}
+
+package() {
+    DESTDIR="${dest_dir}" make NO_RUST=1 install install-man \
+        CURL_CONFIG="${sysroot}${prefix}"/bin/curl-config
+
+    DESTDIR="${dest_dir}" make -C contrib/subtree install install-man
+
+    post_package_strip
+
+    install_hook_add 'grep -qxF /usr/bin/git-shell /etc/shells 2>/dev/null || echo /usr/bin/git-shell >>/etc/shells'
+
+    remove_hook_add 'if [ -f /etc/shells ]; then
+    sed -i '\''\|^/usr/bin/git-shell$|d'\'' /etc/shells
+fi'
+}

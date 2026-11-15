@@ -1,0 +1,47 @@
+#! /bin/sh
+
+version=5.44.0
+revision=1
+tarball_url="https://www.cpan.org/src/5.0/perl-${version}.tar.xz"
+tarball_blake2b="28531a5d6312d9afc2706540da3a818ff8d9976077fe49862245dc6ea3af123eb5a8edf6055a2f49c5abb9b068dd97cd2676cdaabde1e1ba2c52a2da498d894f"
+source_imagedeps="curl"
+imagedeps="build-essential"
+hostdeps="gcc pkg-config"
+deps="core-libs zlib bzip2 gdbm"
+
+_cross_version=1.6.5
+
+early_prepare() {
+    # Perl's own Configure cannot cross-compile; perl-cross replaces it.
+    curl -fLo perl-cross.tar.gz "https://github.com/arsv/perl-cross/releases/download/${_cross_version}/perl-cross-${_cross_version}.tar.gz"
+    b2sum perl-cross.tar.gz | grep -q 7cfaf7104c166724f0bbe2eb060bbda23d22a421f6e1d9f12604bf8687cbc2e5c970691d88100ec4362bf479ceec8cfea066f59472a3b1527ecfbeeaf3ac4c4c
+    tar -xf perl-cross.tar.gz --strip-components=1
+    rm perl-cross.tar.gz
+}
+
+configure() {
+    # perl-cross only builds in its source tree.
+    cp -rp "${source_dir}"/. ./
+
+    ./configure \
+        --target=${OS_TRIPLET} \
+        --sysroot=${sysroot} \
+        --prefix=${prefix} \
+        -Dccflags="${TARGET_CFLAGS}" \
+        -Dldflags="${TARGET_LDFLAGS}" \
+        -Dusethreads \
+        -Duseshrplib \
+        -Dvendorprefix=${prefix} \
+        -Dman1dir=${prefix}/share/man/man1 \
+        -Dman3dir=${prefix}/share/man/man3
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

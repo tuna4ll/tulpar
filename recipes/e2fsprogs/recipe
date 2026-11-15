@@ -1,0 +1,37 @@
+#! /bin/sh
+
+version=1.47.4
+revision=5
+tarball_url="https://cdn.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v${version}/e2fsprogs-${version}.tar.xz"
+tarball_blake2b="ae190e773a83c12a0ab438e13911a5a3f8a25da68373a0911eaddf0a979debcc5a15c22fc7d6fbaed43659c1fc1276e6a345d2f6a73a4ab92e730f177fe40cdb"
+imagedeps="build-essential"
+hostdeps="gcc pkg-config"
+deps="core-libs texinfo util-linux"
+conf_files="/etc/mke2fs.conf"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure \
+        --enable-elf-shlibs \
+        --disable-libblkid \
+        --disable-libuuid \
+        --disable-uuidd \
+        --disable-fsck
+}
+
+build() {
+    make -j${parallelism} V=1
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    rm -v "${dest_dir}${prefix}/lib"/*.a
+
+    post_package_strip
+
+    generate_info_hooks
+}

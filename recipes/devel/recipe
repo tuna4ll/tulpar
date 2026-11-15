@@ -2,7 +2,7 @@
 
 skip_pkg_check=yes
 version=0.0
-revision=1
+revision=2
 
 # A native toolchain: compile C and C++ on Tulpar itself.
-deps="base gcc binutils make pkg-config patch diffutils"
+deps="base gcc binutils make pkg-config patch diffutils git perl python strace gdb"

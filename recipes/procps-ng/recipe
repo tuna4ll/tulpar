@@ -1,0 +1,25 @@
+#! /bin/sh
+
+version=4.0.7
+revision=1
+tarball_url="https://downloads.sourceforge.net/project/procps-ng/Production/procps-ng-${version}.tar.xz"
+tarball_blake2b="8182776a8ff5ca92ade4dc7b2bc1c823ecb6e19075975ed1eb977a7fe2356be1d383c284f94c109cbacb5306861af882d2aa3b08fc24fc21370a7dcd047315ab"
+hostdeps="gcc pkg-config"
+deps="core-libs ncurses"
+
+configure() {
+    # util-linux already ships kill.
+    autotools_configure \
+        --disable-kill \
+        --without-systemd
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

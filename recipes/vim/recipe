@@ -1,0 +1,54 @@
+#! /bin/sh
+
+version=9.2.1172
+revision=1
+git_url="https://github.com/vim/vim.git"
+commit=b2b47bdf9401c865780dd4c47b1dbafb0463c75a
+hostdeps="gcc pkg-config"
+deps="core-libs ncurses"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    cp -rp ${source_dir}/* .
+
+        vim_cv_toupper_broken="no" \
+        vim_cv_terminfo="yes" \
+        vim_cv_tgetent="zero" \
+        vim_cv_getcwd_broken="no" \
+        vim_cv_stat_ignores_slash="no" \
+        vim_cv_memmove_handles_overlap="yes" \
+        vim_cv_bcopy_handles_overlap="yes" \
+        vim_cv_memcpy_handles_overlap="yes" \
+    autotools_configure \
+        --with-features=huge \
+        --with-wayland=no \
+        --enable-gpm \
+        --enable-acl \
+        --with-x=no \
+        --disable-gui \
+        --enable-multibyte \
+        --enable-cscope \
+        --enable-netbeans \
+        --enable-perlinterp=dynamic \
+        --enable-python3interp=dynamic \
+        --enable-rubyinterp=dynamic \
+        --enable-luainterp=dynamic \
+        --enable-tclinterp=dynamic \
+        --disable-canberra
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    make install DESTDIR="${dest_dir}" STRIP=/bin/true
+    ln -sfv vim "${dest_dir}${prefix}"/bin/vi
+
+    rm -f "${dest_dir}${prefix}"/share/man/man1/evim.1
+
+    post_package_strip
+}

@@ -1,0 +1,29 @@
+#! /bin/sh
+
+version=1.2.16
+revision=1
+tarball_url="https://www.alsa-project.org/files/pub/utils/alsa-utils-${version}.tar.bz2"
+tarball_blake2b="9a4d6daf4bcb5564661eb92b0d11b3077d209282c4826c96531590b2d987bd1e4cf92f2ee65a9c388235f540cbaaea108eb90987112ed528620eaecb1d0f0137"
+hostdeps="gcc pkg-config"
+deps="core-libs alsa-lib ncurses"
+
+configure() {
+    autotools_configure \
+        --disable-alsaconf \
+        --disable-bat \
+        --disable-xmlto \
+        --disable-nls \
+        --with-curses=ncursesw \
+        --with-systemdsystemunitdir=no \
+        --with-udev-rules-dir=${prefix}/lib/udev/rules.d
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

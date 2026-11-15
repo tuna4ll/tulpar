@@ -1,0 +1,28 @@
+#! /bin/sh
+
+version=7.3.0
+revision=1
+tarball_url="https://mirrors.edge.kernel.org/pub/linux/utils/net/iproute2/iproute2-${version}.tar.xz"
+tarball_blake2b="0c18f299eabb234389babd63bc52953cf1245387b37b73d0af834983346413b23e9c1b70d5246a1328dbaaf00de26fa5690f4d5c88b59ffa5582c8358f066be9"
+imagedeps="bison flex"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    # iproute2's configure only works in its source tree.
+    cp -rp "${source_dir}"/. ./
+    # netem's distribution tables come from a tool built and run on the build machine.
+    checked_subst 's/(\nSUBDIRS=lib ip tc bridge misc) netem/\1/' Makefile
+    CC=${OS_TRIPLET}-gcc AR=${OS_TRIPLET}-ar ./configure --prefix=${prefix}
+}
+
+build() {
+    make -j${parallelism} CC=${OS_TRIPLET}-gcc AR=${OS_TRIPLET}-ar HOSTCC=gcc \
+        CCOPTS="${TARGET_CFLAGS}" LDFLAGS="${TARGET_LDFLAGS}" SBINDIR=${prefix}/bin
+}
+
+package() {
+    make DESTDIR="${dest_dir}" SBINDIR=${prefix}/bin install
+
+    post_package_strip
+}
