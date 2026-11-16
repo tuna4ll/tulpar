@@ -5,6 +5,7 @@ ar = 'aarch64-tulpar-linux-gnu-ar'
 nm = 'aarch64-tulpar-linux-gnu-nm'
 strip = 'aarch64-tulpar-linux-gnu-strip'
 pkg-config = 'aarch64-tulpar-linux-gnu-pkg-config'
+llvm-config = '/base_dir/build-support/cross-llvm-config'
 
 [host_machine]
 system = 'linux'

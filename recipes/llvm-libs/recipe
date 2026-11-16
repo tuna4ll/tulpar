@@ -1,0 +1,52 @@
+#! /bin/sh
+
+version=22.1.8
+revision=1
+tarball_url="https://github.com/llvm/llvm-project/releases/download/llvmorg-${version}/llvm-project-${version}.src.tar.xz"
+tarball_blake2b="092204f62e0f0364a041c737eb2c25fd073cb5689663d6ccd5a9e4e1743d6d80822360d59b64bff7b4d7872a68a79e899bf2f75f384e55c7d313a79243576f03"
+imagedeps="build-essential"
+hostdeps="gcc pkg-config"
+deps="core-libs zlib zstd libffi libxml2"
+
+configure() {
+    # Mesa's llvmpipe only generates code for the machine it runs on.
+    case "${JINX_ARCH}" in
+        x86_64) llvm_target=X86 ;;
+        aarch64) llvm_target=AArch64 ;;
+    esac
+
+        cmake_source_dir="${source_dir}/llvm" \
+    cmake_configure \
+        -UBUILD_SHARED_LIBS \
+        -UENABLE_STATIC \
+        -DLLVM_TARGETS_TO_BUILD=${llvm_target} \
+        -DLLVM_LINK_LLVM_DYLIB=ON \
+        -DLLVM_ENABLE_FFI=ON \
+        -DLLVM_INCLUDE_TESTS=OFF \
+        -DLLVM_INCLUDE_BENCHMARKS=OFF \
+        -DLLVM_INCLUDE_EXAMPLES=OFF \
+        -DLLVM_ENABLE_BINDINGS=OFF \
+        -DCMAKE_SKIP_RPATH=ON \
+        -DLLVM_BUILD_TESTS=OFF \
+        -DLLVM_ENABLE_RTTI=ON \
+        -DLLVM_PARALLEL_LINK_JOBS=2 \
+        -DLLVM_DEFAULT_TARGET_TRIPLE=${OS_TRIPLET} \
+        -DLLVM_HOST_TRIPLE=${OS_TRIPLET} \
+        -Wno-dev
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    rm -rf "${dest_dir}${prefix}"/lib/*.a
+    rm -rf "${dest_dir}${prefix}"/bin
+
+    sed -i 's|^set(LLVM_DEFAULT_EXTERNAL_LIT .*|set(LLVM_DEFAULT_EXTERNAL_LIT "")|' \
+        "${dest_dir}${prefix}"/lib/cmake/llvm/LLVMConfig.cmake
+
+    post_package_strip
+}

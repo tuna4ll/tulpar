@@ -1,0 +1,25 @@
+#! /bin/sh
+
+version=0.2.4
+revision=1
+tarball_url="https://gitlab.freedesktop.org/libdecor/libdecor/-/archive/${version}/libdecor-${version}.tar.gz"
+tarball_blake2b="1ce036208e53803dec73599f96db87719e21222f5adea9bd24f99e45dc5a9a5b156dc15f62a07499a02b5cbbad090b5bf8e8a4385533a62cb2f17fc27a35bb3e"
+imagedeps="libwayland-bin libwayland-dev pkgconf"
+hostdeps="gcc pkg-config"
+deps="core-libs wayland wayland-protocols cairo pango dbus"
+
+configure() {
+    meson_configure \
+        -Ddemo=false \
+        -Dgtk=disabled
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}
