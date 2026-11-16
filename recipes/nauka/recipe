@@ -1,12 +1,12 @@
 #! /bin/sh
 
 version=0.2.0
-revision=1
+revision=2
 tarball_url="https://github.com/shadowash8/nauka/archive/refs/tags/v${version}.tar.gz"
 tarball_blake2b="88efaa2775f66cc2de7487aa431e4a9168dfce2e477f8926303f5845163a82595b47d2643571bbdcce4ee60c97a1465df696712b2a0351a77dc9072cf999775d"
 imagedeps="libwayland-bin libwayland-dev pkgconf"
 hostdeps="gcc pkg-config"
-deps="core-libs scenefx wlroots seatd"
+deps="core-libs scenefx wlroots seatd qterminal qt6-wayland"
 
 configure() {
     meson_configure \
@@ -19,6 +19,79 @@ build() {
 
 package() {
     DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    install -Dm644 /dev/stdin "${dest_dir}"/etc/xdg/nauka/nauka.conf <<'EOF'
+# Tulpar's default nauka config. Copy it to ~/.config/nauka/nauka.conf to change it.
+
+env QT_QPA_PLATFORM wayland
+
+# Border
+border_width 3
+border_color_active #e6992eff
+border_color_inactive #4d4d4dff
+
+# Eye candy; blur is left off since Tulpar renders in software.
+border_radius 12
+opacity_active 0.95
+opacity_inactive 0.85
+blur 0
+shadow 0
+
+# Animation
+animation_duration 200 # ms
+animation_curve 0.0, 0.85, 0.2, 1.0
+
+# Input
+focus_follows_mouse true
+keyboard_layout us
+
+# Misc
+default_layout grid # grid, master or scroller
+new_window_position bottom
+
+# Keybinds
+keybind super return run qterminal
+keybind super q kill_active
+keybind super j next_toplevel
+keybind super k prev_toplevel
+keybind super+shift j swap_prev_toplevel
+keybind super+shift k swap_next_toplevel
+keybind super g toggle_floating
+keybind super s toggle_sticky
+keybind super z layout scroller
+keybind super x layout grid
+keybind super c layout master
+keybind super r reload
+keybind super equal grow_focused
+keybind super minus shrink_focused
+keybind super+shift q exit
+
+# Pointer
+keybind super pointer_left_click move
+keybind super pointer_right_click resize
+
+# View tags
+keybind super 1 view_tag
+keybind super 2 view_tag
+keybind super 3 view_tag
+keybind super 4 view_tag
+keybind super 5 view_tag
+keybind super 6 view_tag
+keybind super 7 view_tag
+keybind super 8 view_tag
+keybind super 9 view_tag
+
+# Move the focused window to a tag
+keybind super+shift 1 move_focused_to_tag
+keybind super+shift 2 move_focused_to_tag
+keybind super+shift 3 move_focused_to_tag
+keybind super+shift 4 move_focused_to_tag
+keybind super+shift 5 move_focused_to_tag
+keybind super+shift 6 move_focused_to_tag
+keybind super+shift 7 move_focused_to_tag
+keybind super+shift 8 move_focused_to_tag
+keybind super+shift 9 move_focused_to_tag
+EOF
 
     post_package_strip
 }

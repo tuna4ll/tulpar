@@ -1,0 +1,16 @@
+Read /etc/xdg/nauka/nauka.conf when the user has no config, which would leave no keybinds.
+
+--- a/src/config.c
++++ b/src/config.c
+@@ -811,8 +811,9 @@
+   char path[PATH_MAX];
+   config_get_path(path, sizeof(path));
+ 
+-  if (path[0] == '\0')
+-    return;
++  /* Without a config of the user's own, there would be no keybinds at all. */
++  if (path[0] == '\0' || access(path, R_OK) != 0)
++    snprintf(path, sizeof(path), "%s", "/etc/xdg/nauka/nauka.conf");
+ 
+   parse_file(config, path);
+ }
