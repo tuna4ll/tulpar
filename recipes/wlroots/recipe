@@ -1,0 +1,38 @@
+#! /bin/sh
+
+version=0.20.2
+revision=1
+tarball_url="https://gitlab.freedesktop.org/wlroots/wlroots/-/archive/${version}/wlroots-${version}.tar.gz"
+tarball_blake2b="2788e295471aa0de20658465e3c69984623ba9737af2f352821e1cbad99dbfb434dda6ead319dbb994f41e90a4f6123b28853de57aea69a0ffb668bfb364efa7"
+imagedeps="hwdata libwayland-bin libwayland-dev pkgconf"
+hostdeps="gcc pkg-config"
+deps="core-libs wayland wayland-protocols libdrm libxkbcommon pixman mesa libinput seatd libudev-zero libdisplay-info"
+
+configure() {
+    meson_configure \
+        -Dwerror=false \
+        -Dxwayland=disabled \
+        -Dexamples=false \
+        -Drenderers=gles2 \
+        -Dbackends=drm,libinput \
+        -Dallocators=gbm \
+        -Dsession=enabled \
+        -Dcolor-management=disabled \
+        -Dlibliftoff=disabled \
+        -Dxcb-errors=disabled
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    # Tulpar's only GL is Mesa's softpipe, which wlroots refuses unless told.
+    install -Dm644 /dev/stdin "${dest_dir}"/etc/profile.d/wlroots.sh <<'EOF'
+export WLR_RENDERER_ALLOW_SOFTWARE=1
+EOF
+
+    post_package_strip
+}

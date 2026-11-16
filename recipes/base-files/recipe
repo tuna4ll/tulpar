@@ -2,7 +2,7 @@
 
 skip_pkg_check=yes
 version=0.0
-revision=15
+revision=16
 source_dir="base-files"
 deps="core-libs"
 conf_files="/etc/group /etc/locale.conf /etc/locale.gen /etc/nsswitch.conf /etc/passwd"
@@ -16,5 +16,6 @@ package() {
     install_hook_add 'chown -R 1000:1000 home/tulpar' \
                      'chmod 750 root' \
                      'chmod -R 1777 tmp' \
-                     'chmod 710 home/tulpar'
+                     'chmod 710 home/tulpar' \
+                     '[ ! -x usr/bin/localedef ] || locale-gen >/dev/null'
 }

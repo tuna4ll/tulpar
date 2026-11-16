@@ -18,6 +18,7 @@ fi
 rm -rf /usr/lib/locale/locale-archive || true
 
 umask 022
+mkdir -p /usr/lib/locale
 
 is_entry_ok() {
   if [ -z "$locale" ] || [ -z "$charset" ]; then

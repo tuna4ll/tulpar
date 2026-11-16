@@ -1,0 +1,26 @@
+#! /bin/sh
+
+version=0.5
+revision=1
+tarball_url="https://github.com/wlrfx/scenefx/archive/refs/tags/${version}.tar.gz"
+tarball_blake2b="e8b5f43373b4d36933deffa980fca86c89657615f0c0290fa6813b8635c06623a2065528900f93e0b3ea4353d415f0c0871f6f38f05cce94bda5cb075e574c2d"
+imagedeps="libwayland-bin libwayland-dev pkgconf"
+hostdeps="gcc pkg-config"
+deps="core-libs wlroots"
+
+configure() {
+    meson_configure \
+        -Dwerror=false \
+        -Dexamples=false \
+        -Dcolor-management=disabled
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}
