@@ -1,7 +1,7 @@
 #! /bin/sh
 
 version=18.1
-revision=2
+revision=4
 tarball_url="https://ftp.gnu.org/gnu/gdb/gdb-${version}.tar.xz"
 tarball_blake2b="9cf68cd96ecd1b2f51235f80f30d4024eadea7e11fe8af1cde0103176c622b770d79fde2205739fad8fe314ffecddd450626976e1897b04899027d0d88f30e1d"
 imagedeps="build-essential texinfo"
@@ -9,6 +9,7 @@ hostdeps="gcc pkg-config"
 deps="core-libs gmp mpfr libexpat ncurses readline xz zstd"
 
 configure() {
+    # An empty sysroot keeps gdb's default; the build's /sysroot would be looked in for every library.
     autotools_configure \
         --with-system-readline \
         --with-expat \
@@ -17,7 +18,8 @@ configure() {
         --disable-nls \
         --with-gmp=${sysroot}${prefix} \
         --with-mpfr=${sysroot}${prefix} \
-        --disable-shared
+        --disable-shared \
+        --with-sysroot=
 }
 
 build() {
