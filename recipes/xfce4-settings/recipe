@@ -1,0 +1,39 @@
+#! /bin/sh
+
+version=4.20.5
+revision=1
+tarball_url="https://archive.xfce.org/src/xfce/xfce4-settings/4.20/xfce4-settings-${version}.tar.bz2"
+tarball_blake2b="88a6a63cfd419e8e771c9aa6231907f46c53e7e2b4b863f9e32c1d58f77edba96420d11ece89d85555617a2e66b0704f291ddf36cfdeafba04a8b30115cfe302"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 gtk3 adwaita-icon-theme-legacy exo garcon libnotify libxfce4ui libxfce4util xfconf libxrandr libxcursor libxi libx11"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    # The resource compiler pkg-config names is the target's own, which cannot run here.
+        GLIB_COMPILE_RESOURCES=/usr/bin/glib-compile-resources \
+    autotools_configure \
+        --disable-xorg-libinput \
+        --disable-libxklavier \
+        --disable-upower-glib \
+        --disable-colord \
+        --disable-sound-settings
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    # Tulpar's icons are Adwaita's PNG set; the SVG one needs a loader it does not have.
+    sed -i 's|name="IconThemeName" type="string" value="Adwaita"|name="IconThemeName" type="string" value="AdwaitaLegacy"|' \
+        "${dest_dir}"/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml
+    grep -q AdwaitaLegacy "${dest_dir}"/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml
+
+    post_package_strip
+}

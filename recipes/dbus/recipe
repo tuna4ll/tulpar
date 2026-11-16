@@ -1,0 +1,44 @@
+#! /bin/sh
+
+version=1.16.2
+revision=8
+tarball_url="https://dbus.freedesktop.org/releases/dbus/dbus-${version}.tar.xz"
+tarball_blake2b="ddca8abdd5df70b24d51293a262cda3f9e69681b31ae8bb560a6286ca6f2dc0c420dc5322a61bb142a77b2b5f86bdafcc6bf84b0d78af9610af7a78763b8b8fb"
+hostdeps="gcc pkg-config"
+deps="core-libs libexpat libx11"
+
+configure() {
+    meson_configure \
+        -Druntime_dir=/run \
+        -Dsystemd_system_unitdir=no \
+        -Dsystemd_user_unitdir=no \
+        -Dsystem_pid_file=/run/dbus/pid \
+        -Dsystem_socket=/run/dbus/system_bus_socket \
+        -Dselinux=disabled \
+        -Dapparmor=disabled \
+        -Dlibaudit=disabled \
+        -Dkqueue=disabled \
+        -Dlaunchd=disabled \
+        -Dsystemd=disabled \
+        -Dducktype_docs=disabled \
+        -Dqt_help=disabled \
+        -Depoll=disabled \
+        -Dinotify=disabled \
+        -Dx11_autolaunch=enabled \
+        -Dmodular_tests=disabled
+}
+
+build() {
+    meson compile --verbose -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    touch "${dest_dir}${prefix}"/share/dbus-1/session.d/.keep
+
+    post_package_strip
+
+    install_hook_add 'mkdir -p /var/lib/dbus' \
+                     'dbus-uuidgen --ensure >/var/lib/dbus/machine-id'
+}

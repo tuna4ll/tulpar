@@ -1,0 +1,28 @@
+#! /bin/sh
+
+version=4.20.0
+revision=1
+tarball_url="https://archive.xfce.org/src/xfce/exo/4.20/exo-${version}.tar.bz2"
+tarball_blake2b="c4747eb7ea38e419d48a8de10bbb750fd463b211691550cb3f5b7a88bddd468aaf9200189db42e62557f22be9f95a863305299a13d16ec73497dfe7cbc49ea59"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 gtk3 libxfce4util libxfce4ui"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure \
+        --disable-gtk-doc
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

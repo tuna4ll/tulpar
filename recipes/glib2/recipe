@@ -1,0 +1,39 @@
+#! /bin/sh
+
+repology_id=glib
+version=2.90.1
+revision=1
+tarball_url="https://download.gnome.org/sources/glib/2.90/glib-${version}.tar.xz"
+tarball_blake2b="97858d88b5dfb0f6d081b59dec5e6e3c96680fc72d53d3389f07cc36c8c18a2b5b9ac7af943db8294376be496932f5fe75e42f0f4747c2cd88056ba505dba073"
+imagedeps="python3-docutils"
+hostdeps="gcc pkg-config"
+deps="core-libs pcre2 libffi zlib util-linux"
+
+configure() {
+    meson_configure \
+        -Dglib_debug=disabled \
+        -Dman-pages=enabled \
+        -Dsysprof=disabled \
+        -Dtests=false \
+        -Dintrospection=disabled \
+        -Dxattr=false \
+        -Ddtrace=disabled \
+        -Dsystemtap=disabled \
+        -Dselinux=disabled \
+        -Dlibelf=disabled
+}
+
+build() {
+    meson compile --verbose -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    sed -i 's|\.\./\.\./\.\./base_dir/sources/glib2/||g' \
+        "${dest_dir}${prefix}"/share/man/man1/gi-decompile-typelib.1
+
+    post_package_strip
+
+    generate_glib_schemas_hook
+}

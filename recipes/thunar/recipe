@@ -1,0 +1,30 @@
+#! /bin/sh
+
+version=4.20.10
+revision=1
+tarball_url="https://archive.xfce.org/src/xfce/thunar/4.20/thunar-${version}.tar.bz2"
+tarball_blake2b="cd68a01070ec6b7b956891ab6e844dca6c6ab88adadc85b51514db9df157323231c620ca5c96d7650776d579239d159dd6ed0f6899a89a2be8f4e5bb04d634fd"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 gtk3 exo gdk-pixbuf libnotify libxfce4ui libxfce4util pango xfconf"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure \
+        --disable-introspection \
+        --disable-gtk-doc \
+        --disable-gudev
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

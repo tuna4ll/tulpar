@@ -24,6 +24,9 @@ export PATH
 # runit's sv looks under /service unless told otherwise.
 export SVDIR=/var/service
 
+# The accessibility bus never answers on Tunix; without this every GTK program waits 25 seconds for it.
+export NO_AT_BRIDGE=1
+
 # Load profiles from /etc/profile.d
 if test -d /etc/profile.d/; then
 	for profile in /etc/profile.d/*.sh; do

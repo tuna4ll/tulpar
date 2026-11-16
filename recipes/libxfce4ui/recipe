@@ -1,0 +1,34 @@
+#! /bin/sh
+
+version=4.20.2
+revision=1
+tarball_url="https://archive.xfce.org/src/xfce/libxfce4ui/4.20/libxfce4ui-${version}.tar.bz2"
+tarball_blake2b="0105ec24cb2b77a38d319d11d242af15f2b67b14836402607f1fa691cd35c75d863be0dcd70c991bcda8098a0e9694df9bf5f7327189c39fe6fd4f564c272648"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 gtk3 libxfce4util xfconf libsm libice libx11"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure \
+        --disable-introspection \
+        --disable-vala \
+        --disable-gtk-doc \
+        --disable-gudev \
+        --disable-glade \
+        --disable-libgtop \
+        --disable-epoxy
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

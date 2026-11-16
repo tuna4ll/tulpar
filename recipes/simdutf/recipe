@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=9.3.3
+revision=1
+git_url="https://github.com/simdutf/simdutf.git"
+commit=59589cd3df6823cbfdbd253cde3377e7c3e1fe9b
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    cmake_configure \
+        -DSIMDUTF_TESTS=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

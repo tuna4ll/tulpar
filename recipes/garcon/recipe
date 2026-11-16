@@ -1,0 +1,29 @@
+#! /bin/sh
+
+version=4.20.0
+revision=1
+tarball_url="https://archive.xfce.org/src/xfce/garcon/4.20/garcon-${version}.tar.bz2"
+tarball_blake2b="ae391d1f430c01e415d66a2b97542cf166c0ecacfce51f955bdacec23372d8ac057dccb2a70c450879772281cb482025dd31b631c950026fd2f10b0ebf52c91a"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 gtk3 libxfce4util libxfce4ui"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure \
+        --disable-introspection \
+        --disable-gtk-doc
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

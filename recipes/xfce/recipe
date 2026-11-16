@@ -1,0 +1,8 @@
+#! /bin/sh
+
+skip_pkg_check=yes
+version=4.20
+revision=1
+
+# The Xfce desktop, started with startxfce4.
+deps="dbus xfce4-session xfwm4 xfce4-panel xfdesktop xfce4-settings thunar xfce4-appfinder xfce4-terminal adwaita-icon-theme-legacy"

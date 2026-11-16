@@ -1,0 +1,27 @@
+#! /bin/sh
+
+version=1.1.5
+revision=1
+tarball_url="https://archive.xfce.org/src/apps/xfce4-terminal/1.1/xfce4-terminal-${version}.tar.xz"
+tarball_blake2b="d17a90a89e883d274e63ccba8332fc5b4caf4a9fab50eed26afc1401795df305ba4190cfb8e653b7a2730226dd3f6a870e32581a0c5ba2d660cbe79000ba9a54"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin xfce4-dev-tools"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 gtk3 libxfce4ui libxfce4util pcre2 vte xfconf libx11"
+
+configure() {
+    meson_configure \
+        -Dwayland=disabled \
+        -Dx11=enabled \
+        -Dgtk-layer-shell=disabled \
+        -Dlibutempter=disabled
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}

@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=0.3.0
+revision=1
+tarball_url="https://gitlab.freedesktop.org/emersion/libdisplay-info/-/archive/${version}/libdisplay-info-${version}.tar.gz"
+tarball_blake2b="c1a3fb376d82217eb74354128fe1798bc90b7d21ca599a6939d6689681243d13968861af3284627d5e1396eae810e4a6a1777e098de9617581089d5deddb304d"
+imagedeps="hwdata"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    meson_configure
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}

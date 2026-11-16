@@ -1,0 +1,23 @@
+#! /bin/sh
+
+skip_pkg_check=yes
+from_source=libtiff
+bootstrap_pkg=yes
+revision=6
+hostdeps="gcc pkg-config"
+deps="core-libs freeglut mesa libjpeg-turbo zlib zstd xz"
+
+configure() {
+    cmake_configure \
+        -Dwebp=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

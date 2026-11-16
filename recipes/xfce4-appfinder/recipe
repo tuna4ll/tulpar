@@ -1,0 +1,27 @@
+#! /bin/sh
+
+version=4.20.0
+revision=1
+tarball_url="https://archive.xfce.org/src/xfce/xfce4-appfinder/4.20/xfce4-appfinder-${version}.tar.bz2"
+tarball_blake2b="993c88cd9fe256d11bffb4d6a1ce5fab03ca3261b345b9b1bcb07ddf56da87f2a0e6c7eaa36cd03faee6fdce621f890426d8ab6cbf3ce831ee9d37c1e3f5c5b4"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 gtk3 garcon libxfce4ui libxfce4util xfconf"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

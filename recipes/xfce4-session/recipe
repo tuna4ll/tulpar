@@ -1,0 +1,32 @@
+#! /bin/sh
+
+version=4.20.4
+revision=1
+tarball_url="https://archive.xfce.org/src/xfce/xfce4-session/4.20/xfce4-session-${version}.tar.bz2"
+tarball_blake2b="e49787a13f82bc06633fcb4d67c542a9ad48956511e403122bc63220b5bb9eba33eae0fbd0d11c8abb5a4f80cf10c61ffb3d31a5cd6cfd64893cf37540123c1f"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 gtk3 libxfce4util libxfce4ui xfconf libxfce4windowing libsm libice xorg-iceauth"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    # iceauth is looked for on the build machine; name where it is on Tulpar.
+    # The resource compiler pkg-config names is the target's own, which cannot run here.
+        ac_cv_path_ICEAUTH=/usr/bin/iceauth \
+        GLIB_COMPILE_RESOURCES=/usr/bin/glib-compile-resources \
+    autotools_configure \
+        --disable-polkit
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

@@ -1,0 +1,22 @@
+#! /bin/sh
+
+# Adwaita's full-colour icons as PNGs, which need no SVG loader.
+version=46.2
+revision=1
+tarball_url="https://download.gnome.org/sources/adwaita-icon-theme-legacy/${version%%.*}/adwaita-icon-theme-legacy-${version}.tar.xz"
+tarball_blake2b="571ad9402c3ab3d29d856b72fae3969bc78fc4ca40aa285d84d9ec562084182dacf566820deca13ed028d92b88e80f7410824b605bf89a6501c39370bce54a12"
+imagedeps="libgtk-3-bin"
+hostdeps="gcc pkg-config"
+deps="hicolor-icon-theme"
+
+configure() {
+    meson_configure
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+}
