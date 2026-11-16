@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=2.5.0
+revision=1
+tarball_url="https://github.com/lxqt/libfm-qt/releases/download/${version}/libfm-qt-${version}.tar.xz"
+tarball_blake2b="98585fbd119efa665faff6bee06feaee449082aa64b53d3b762e7a4677377079abc78b1148e954597749f2927319fd681e6ecb30f1a66c16db5e8cdd6bf983ce"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools doxygen"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base glib2 lxqt-menu-data libexif libxcb menu-cache lxqt-build-tools"
+
+configure() {
+    qt_cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

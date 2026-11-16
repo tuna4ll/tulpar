@@ -1,0 +1,25 @@
+#! /bin/sh
+
+# The last series that builds with Qt 6.10; LXQt links it for Wayland and runs fine on X11.
+version=6.7.5
+revision=1
+tarball_url="https://download.kde.org/stable/plasma/${version}/layer-shell-qt-${version}.tar.xz"
+tarball_blake2b="a17ac6a95803f583169cbc0e5c9bb8f026a4d4dac5b2e1c46152fcd990f9d45be972ed32c18be03b3e17e55b4ea6fc5c170bb31d437121cd3cd3c138a9944518"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools qt6-wayland-dev qt6-wayland-dev-tools libwayland-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base qt6-wayland wayland wayland-protocols extra-cmake-modules libxkbcommon"
+
+configure() {
+    qt_cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+    qt_move_plugins
+
+    post_package_strip
+}

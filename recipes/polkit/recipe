@@ -1,0 +1,32 @@
+#! /bin/sh
+
+# Only the libraries: polkit-qt and liblxqt link them; there is no polkit daemon on Tulpar.
+version=128
+revision=1
+tarball_url="https://github.com/polkit-org/polkit/archive/refs/tags/${version}.tar.gz"
+tarball_blake2b="4ccdb80a7023b7154565fee306c59e2cadc39fedb6f671a195f37774e7bea34b693e04616281100c8d4e83e91dc36092134aba63724097356cdbc0087fbc97a5"
+imagedeps="libglib2.0-dev-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 libexpat duktape"
+
+configure() {
+    meson_configure \
+        -Dlibs-only=true \
+        -Dauthfw=shadow \
+        -Dsession_tracking=ConsoleKit \
+        -Dintrospection=false \
+        -Dexamples=false \
+        -Dtests=false \
+        -Dman=false \
+        -Dgtk_doc=false
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}

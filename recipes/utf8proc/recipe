@@ -1,0 +1,24 @@
+#! /bin/sh
+
+version=2.12.0
+revision=1
+tarball_url="https://github.com/JuliaStrings/utf8proc/archive/refs/tags/v${version}.tar.gz"
+tarball_blake2b="94d8a0b414c952a472c1d2a7d2046c959d234d6c5293cef9a7cd28bf4d61298f7a2d1a89a72606f3dcaa5e1faf99f06672d3fc1c1db1384772e60ea5a28b9c5d"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    cmake_configure \
+        -DBUILD_SHARED_LIBS=ON \
+        -DUTF8PROC_ENABLE_TESTING=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

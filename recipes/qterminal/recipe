@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=2.5.0
+revision=1
+tarball_url="https://github.com/lxqt/qterminal/releases/download/${version}/qterminal-${version}.tar.xz"
+tarball_blake2b="7f133db5632a27e79170cf3ce2e3a45fa1319b4a2921baeb333fefa1be7dae3ed4448cad0c6b97528711072caf5484e8fa8afa987d33edfdf64688bbd37463c8"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base qtermwidget layer-shell-qt libx11 lxqt-build-tools"
+
+configure() {
+    qt_cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

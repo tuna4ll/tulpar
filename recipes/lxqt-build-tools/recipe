@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=2.5.0
+revision=1
+tarball_url="https://github.com/lxqt/lxqt-build-tools/releases/download/${version}/lxqt-build-tools-${version}.tar.xz"
+tarball_blake2b="35586adc381bbd9eb54b5c0e1c20b6eeb7793f699fd97a04565c79d17f44e2d4a63c624de38476f4c17cc52d9f86e7c159dac9a9d1952b1495f3db25f6e00615"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base glib2"
+
+configure() {
+    qt_cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=2.5.0
+revision=1
+tarball_url="https://github.com/lxqt/pcmanfm-qt/releases/download/${version}/pcmanfm-qt-${version}.tar.xz"
+tarball_blake2b="bd059a702bdcab36b2d266e161b45d1e4e5269866e616976fcbb5ba5d1d57219e5b993caac38e36af7f72eb492ca9b28fd4a209d53df19d85fe8f348e84a5511"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools doxygen"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base libfm-qt layer-shell-qt lxqt-build-tools"
+
+configure() {
+    qt_cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

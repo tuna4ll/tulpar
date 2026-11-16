@@ -1,0 +1,28 @@
+#! /bin/sh
+
+version=0.18
+revision=1
+tarball_url="https://user-dirs.freedesktop.org/releases/xdg-user-dirs-${version}.tar.gz"
+tarball_blake2b="e9d05a2399040229eaed4947098bb587a3962860a0c162fd5bd939451df592130faa2fc5201440787a6a481e966f7769912b46ca1028e57a834fc7ddd950f904"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+conf_files="/etc/xdg/user-dirs.conf /etc/xdg/user-dirs.defaults"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure \
+        --disable-documentation
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

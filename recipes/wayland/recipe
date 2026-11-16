@@ -1,0 +1,25 @@
+#! /bin/sh
+
+version=1.26.0
+revision=1
+tarball_url="https://gitlab.freedesktop.org/wayland/wayland/-/releases/${version}/downloads/wayland-${version}.tar.xz"
+tarball_blake2b="f5a9179f5e82d564812dfdc0bbca2e4bed6ff9963b9a1ff181489774eb10946a37f5ec004a87354bf1e8ac012553926dcc6e65feb9eacdb9a18cbc034590a325"
+imagedeps="libwayland-bin libwayland-dev pkgconf"
+hostdeps="gcc pkg-config"
+deps="core-libs libffi libexpat libxml2"
+
+configure() {
+    meson_configure \
+        -Ddocumentation=false \
+        -Dtests=false
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}

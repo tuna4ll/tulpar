@@ -1,0 +1,58 @@
+#! /bin/sh
+
+version=6.10.2
+revision=1
+tarball_url="https://download.qt.io/archive/qt/6.10/${version}/submodules/qtbase-everywhere-src-${version}.tar.xz"
+tarball_blake2b="cc02accc0387e57d7ec7f094963d9d0b1010720233a99979da5df35a589028bbe080677317486cc52d941256f758b6e977ced3922398b4b7da8b669b2d16e361"
+imagedeps="qt6-base-dev qt6-base-dev-tools ninja-build libwayland-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs zlib zstd brotli icu pcre2 glib2 dbus freetype2 fontconfig harfbuzz libpng libjpeg-turbo libdrm mesa libx11 libxcb xcb-util xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil xcb-util-cursor libxkbcommon libxrender libxi wayland"
+
+configure() {
+    # Qt 6.10's TLS plugin reaches into structures OpenSSL 4 made opaque; nothing here needs TLS.
+    qt_cmake_configure \
+        -GNinja \
+        -DINSTALL_BINDIR=lib/qt6/bin \
+        -DINSTALL_PUBLICBINDIR=bin \
+        -DINSTALL_LIBEXECDIR=lib/qt6/libexec \
+        -DINSTALL_DOCDIR=share/doc/qt6 \
+        -DINSTALL_SYSCONFDIR=/etc/xdg \
+        -DINSTALL_ARCHDATADIR=lib/qt6 \
+        -DINSTALL_DATADIR=share/qt6 \
+        -DINSTALL_INCLUDEDIR=include/qt6 \
+        -DINSTALL_MKSPECSDIR=lib/qt6/mkspecs \
+        -DINSTALL_PLUGINSDIR=lib/qt6/plugins \
+        -DINSTALL_QMLDIR=lib/qt6/qml \
+        -DINSTALL_TRANSLATIONSDIR=share/qt6/translations \
+        -DINSTALL_EXAMPLESDIR=share/doc/qt6/examples \
+        -DQT_BUILD_EXAMPLES=OFF \
+        -DQT_BUILD_TESTS=OFF \
+        -DBUILD_WITH_PCH=OFF \
+        -DQT_QMAKE_TARGET_MKSPEC=linux-g++ \
+        -DFEATURE_xcb=ON \
+        -DFEATURE_xcb_xlib=ON \
+        -DFEATURE_xkbcommon_x11=ON \
+        -DINPUT_opengl=desktop \
+        -DFEATURE_vulkan=OFF \
+        -DFEATURE_eglfs=OFF \
+        -DFEATURE_linuxfb=OFF \
+        -DFEATURE_journald=OFF \
+        -DFEATURE_system_zlib=ON \
+        -DFEATURE_system_pcre2=ON \
+        -DFEATURE_system_freetype=ON \
+        -DFEATURE_system_harfbuzz=ON \
+        -DFEATURE_system_png=ON \
+        -DFEATURE_system_jpeg=ON \
+        -DFEATURE_openssl=OFF \
+        -DFEATURE_sql=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

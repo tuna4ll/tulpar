@@ -1,0 +1,24 @@
+#! /bin/sh
+
+version=0.5.0
+revision=1
+tarball_url="https://github.com/lxqt/libdbusmenu-lxqt/releases/download/${version}/libdbusmenu-lxqt-${version}.tar.xz"
+tarball_blake2b="a241646dbd4c0453a477a296617e420b0d23fd9fbe0c1bebde485c9f58f3e3b217da70fe45307a57e8a8648c6539e62060a48b7c0273db00a00634c12f2b9a85"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base lxqt-build-tools"
+
+configure() {
+    qt_cmake_configure \
+        -DWITH_DOC=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

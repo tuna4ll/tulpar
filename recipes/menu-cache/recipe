@@ -1,0 +1,29 @@
+#! /bin/sh
+
+version=1.1.0
+revision=1
+tarball_url="https://downloads.sourceforge.net/lxde/menu-cache-${version}.tar.xz"
+tarball_blake2b="af7caea53a30be53836ccb7d75b0817aef610815009f22dc56fb6d412508ce27a6a5625c25f92faaafe8123dd73ddb2b3f83484e48c1b5deb635c9d630cc868c"
+imagedeps="intltool"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 libfm-extra"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    # menu-cache predates GCC 10 and defines its globals in a header.
+        TARGET_CFLAGS="${TARGET_CFLAGS} -fcommon" \
+    autotools_configure
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

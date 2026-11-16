@@ -1,0 +1,27 @@
+#! /bin/sh
+
+version=6.32.0
+revision=1
+tarball_url="https://download.kde.org/stable/frameworks/6.32/kwindowsystem-${version}.tar.xz"
+tarball_blake2b="a563a00ed3c3abd8dc698690b62772f8ef20ebc7f5191e9b4b93c7912199ab9f1063df633f21bfad512a643c14a9146f861db1d6bf1965e8377e77b8754fb211"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base extra-cmake-modules libx11 libxcb libxfixes xcb-util-keysyms"
+
+configure() {
+    qt_cmake_configure \
+        -DKWINDOWSYSTEM_WAYLAND=OFF \
+        -DKWINDOWSYSTEM_QML=OFF \
+        -DBUILD_PYTHON_BINDINGS=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+    qt_move_plugins
+
+    post_package_strip
+}

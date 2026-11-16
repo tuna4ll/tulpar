@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=4.5.0
+revision=1
+tarball_url="https://github.com/lxqt/qtxdg-tools/releases/download/${version}/qtxdg-tools-${version}.tar.xz"
+tarball_blake2b="8503355700012bf51b88b372f3553e78aea9e95a757d6760496f735eae28b0864a2a6ff1e3047bf88cb4b08cf7ab3d4f5ff8a7c4bb55d2ff58f28dd1a16efa81"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base libqtxdg lxqt-build-tools"
+
+configure() {
+    qt_cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

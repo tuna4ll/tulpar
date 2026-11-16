@@ -1,0 +1,8 @@
+#! /bin/sh
+
+skip_pkg_check=yes
+version=2.5
+revision=1
+
+# The LXQt desktop with Openbox, started with startlxqt.
+deps="lxqt-session lxqt-panel lxqt-runner lxqt-globalkeys lxqt-notificationd lxqt-qtplugin lxqt-themes pcmanfm-qt qterminal openbox adwaita-icon-theme-legacy shared-mime-info dbus"

@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=2.5.0
+revision=1
+tarball_url="https://github.com/lxqt/qtermwidget/releases/download/${version}/qtermwidget-${version}.tar.xz"
+tarball_blake2b="4e88b19f627456f5e8878cbfd6c8395564f2e37c08d8b187f5b616940a76ed9824f37d75db24f3d1878607b2fd63104578cb3eec6b1c5e4cdd961849c7ec89e0"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base utf8proc lxqt-build-tools"
+
+configure() {
+    qt_cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=2.5.0
+revision=1
+tarball_url="https://github.com/lxqt/lxqt-menu-data/releases/download/${version}/lxqt-menu-data-${version}.tar.xz"
+tarball_blake2b="8748f108e8fce6873a36222e254d94ce54b57d061d0359f488009ae4c269fa1dd250ce27fecfaf52da1564e9a02205c26ee42a82f8a0495554632b68a8db0b7c"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base lxqt-build-tools"
+
+configure() {
+    qt_cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

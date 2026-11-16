@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=2.5.0
+revision=1
+tarball_url="https://github.com/lxqt/lxqt-globalkeys/releases/download/${version}/lxqt-globalkeys-${version}.tar.xz"
+tarball_blake2b="25adeffdab698c05e716bbf7cb87f8e365179dc0d3826d44a5e3648c415f01ace9e743f6659e9b8b64e4a3274ee3b70e79aa07e62a3013ee93fb0386db67f1a0"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base liblxqt lxqt-build-tools"
+
+configure() {
+    qt_cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

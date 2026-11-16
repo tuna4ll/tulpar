@@ -1,0 +1,35 @@
+#! /bin/sh
+
+version=3.6.1
+revision=1
+tarball_url="http://openbox.org/dist/openbox/openbox-${version}.tar.xz"
+tarball_blake2b="70357021235c1f38d363ef48e17c6e8f07f2fb5e00a94b13f60323dcbb6e5ec2f97a8115e8d7daf997231346f34a310cb71305f0c9ac42ad7c60e6a771f4e596"
+source_imagedeps="autotools-dev"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 pango libxml2 libx11 libxinerama libxrandr libxcursor libxft"
+
+prepare() {
+    autotools_recursive_regen
+    # Openbox 3.6.1's config.sub is too old to know aarch64 with a vendor field.
+    cp /usr/share/misc/config.sub /usr/share/misc/config.guess ./
+}
+
+configure() {
+    # Openbox 3.6 predates C23 and GCC 14's stricter pointer rules.
+        TARGET_CFLAGS="${TARGET_CFLAGS} -std=gnu17 -fpermissive" \
+    autotools_configure \
+        --disable-startup-notification \
+        --disable-imlib2 \
+        --disable-librsvg \
+        --disable-session-management
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

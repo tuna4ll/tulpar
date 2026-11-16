@@ -1,0 +1,25 @@
+#! /bin/sh
+
+version=2.3.5
+revision=1
+tarball_url="https://github.com/beltoforion/muparser/archive/refs/tags/v${version}.tar.gz"
+tarball_blake2b="fa315b5d42ff1f63dc001b042fd8dc30d6f08da1964d8ea4cb7741483706c3e74e1e8c75d69c1a5bf2e98937c4dd9dde11d931fbb7039b6749f403c2912fbebd"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    cmake_configure \
+        -DENABLE_SAMPLES=OFF \
+        -DENABLE_OPENMP=OFF \
+        -DENABLE_WIDECHAR=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

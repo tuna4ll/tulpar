@@ -1,0 +1,31 @@
+#! /bin/sh
+
+# The plugins left out need lm_sensors, libsysstat, Solid or XComposite, none of which Tulpar has.
+version=2.5.1
+revision=1
+tarball_url="https://github.com/lxqt/lxqt-panel/releases/download/${version}/lxqt-panel-${version}.tar.xz"
+tarball_blake2b="0a748c91a772a629647b65942ccba98fecf4b02f4c1202ae8d13a1a9e833997a5079f834516c0d080e41e27f95fdfb2bbfec3b3a4db5531e9791ad836c02f614"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools libwayland-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base liblxqt lxqt-globalkeys lxqt-menu-data layer-shell-qt kwindowsystem libdbusmenu-lxqt alsa-lib libxkbcommon lxqt-build-tools"
+
+configure() {
+    qt_cmake_configure \
+        -DSENSORS_PLUGIN=OFF \
+        -DSYSSTAT_PLUGIN=OFF \
+        -DCPULOAD_PLUGIN=OFF \
+        -DNETWORKMONITOR_PLUGIN=OFF \
+        -DMOUNT_PLUGIN=OFF \
+        -DTRAY_PLUGIN=OFF \
+        -DVOLUME_USE_PULSEAUDIO=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

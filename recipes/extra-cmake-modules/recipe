@@ -1,0 +1,27 @@
+#! /bin/sh
+
+version=6.32.0
+revision=1
+tarball_url="https://download.kde.org/stable/frameworks/6.32/extra-cmake-modules-${version}.tar.xz"
+tarball_blake2b="a2c1135877b41bf8914ace7c24581d8987c9506aa042c3a62fdafb5dd1ef87f43e282e3780ef48ee87e2c3c1536f8bad9cd0946eaa4360cd0d200b0d2cb0ed78"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    cmake_configure \
+        -DBUILD_TESTING=OFF \
+        -DBUILD_DOC=OFF \
+        -DBUILD_HTML_DOCS=OFF \
+        -DBUILD_MAN_DOCS=OFF \
+        -DBUILD_QTHELP_DOCS=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

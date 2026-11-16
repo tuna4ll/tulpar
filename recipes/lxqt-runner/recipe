@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=2.5.0
+revision=1
+tarball_url="https://github.com/lxqt/lxqt-runner/releases/download/${version}/lxqt-runner-${version}.tar.xz"
+tarball_blake2b="ed27701ee49b0f92c0fbd0f620c1ba7f8b1a9c5fee12b4aa66c1235a181e7505f5fbd11084ba112c90911b74bdf45af05dde834cd8baba1d7a1fc761b31b74a7"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base liblxqt lxqt-globalkeys kwindowsystem layer-shell-qt muparser lxqt-build-tools"
+
+configure() {
+    qt_cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

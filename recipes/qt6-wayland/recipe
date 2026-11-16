@@ -1,0 +1,35 @@
+#! /bin/sh
+
+version=6.10.2
+revision=1
+tarball_url="https://download.qt.io/archive/qt/6.10/${version}/submodules/qtwayland-everywhere-src-${version}.tar.xz"
+tarball_blake2b="c1c8ac0626e021e7755b2f8d4cd9a7463683a3f5987ebd98c6649e8b3f6dbef37e4d3afba56912842908a828c89084173a7a08059b0feca1612620a62f0a15f2"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools qt6-wayland-dev qt6-wayland-dev-tools libwayland-bin ninja-build"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base wayland libxkbcommon"
+
+configure() {
+    qt_cmake_configure \
+        -GNinja \
+        -DINSTALL_BINDIR=lib/qt6/bin \
+        -DINSTALL_PUBLICBINDIR=bin \
+        -DINSTALL_LIBEXECDIR=lib/qt6/libexec \
+        -DINSTALL_ARCHDATADIR=lib/qt6 \
+        -DINSTALL_DATADIR=share/qt6 \
+        -DINSTALL_INCLUDEDIR=include/qt6 \
+        -DINSTALL_MKSPECSDIR=lib/qt6/mkspecs \
+        -DINSTALL_PLUGINSDIR=lib/qt6/plugins \
+        -DINSTALL_QMLDIR=lib/qt6/qml \
+        -DINSTALL_TRANSLATIONSDIR=share/qt6/translations \
+        -DFEATURE_wayland_server=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

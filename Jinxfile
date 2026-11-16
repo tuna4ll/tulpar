@@ -244,6 +244,34 @@ cmake_configure() {
         "$@"
 }
 
+# Qt programs are cross-built against the sysroot's Qt, with moc, rcc, lrelease and the
+# other build tools taken from Debian's Qt of the same version.
+qt_cmake_configure() {
+        PKG_CONFIG="$(command -v ${OS_TRIPLET}-pkg-config)" \
+        PKG_CONFIG_SYSROOT_DIR="${sysroot}" \
+        PKG_CONFIG_LIBDIR="${sysroot}${prefix}/lib/pkgconfig:${sysroot}${prefix}/share/pkgconfig" \
+    cmake_configure \
+        -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY \
+        -DQT_HOST_PATH=/usr \
+        -DQT_HOST_PATH_CMAKE_DIR=/usr/lib/$(uname -m)-linux-gnu/cmake \
+        -DQt6CoreTools_DIR=/usr/lib/$(uname -m)-linux-gnu/cmake/Qt6CoreTools \
+        -DQt6LinguistTools_DIR=/usr/lib/$(uname -m)-linux-gnu/cmake/Qt6LinguistTools \
+        -DWaylandScanner_EXECUTABLE=/usr/bin/wayland-scanner \
+        -DBUILD_TESTING=OFF \
+        "$@"
+}
+
+# Packages that ask Debian's qtpaths where Qt plugins go are told its own
+# multiarch directory; move them where Tulpar's Qt looks.
+qt_move_plugins() {
+    for d in "${dest_dir}${prefix}"/lib/*-linux-gnu/qt6/plugins; do
+        [ -d "$d" ] || continue
+        mkdir -p "${dest_dir}${prefix}"/lib/qt6/plugins
+        cp -a "$d"/. "${dest_dir}${prefix}"/lib/qt6/plugins/
+        rm -rf "${d%/qt6/plugins}"
+    done
+}
+
 cmake_configure_noflags() {
     if [ -z "${cmake_source_dir-}" ]; then
         cmake_source_dir="${source_dir}"

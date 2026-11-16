@@ -1,0 +1,35 @@
+Build without the QML plugin and its tests, which only Wayland QML clients need.
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -30,11 +30,11 @@
+ include(GenerateExportHeader)
+ include(KDEClangFormat)
+ include(ECMQtDeclareLoggingCategory)
+-include(ECMQmlModule)
++
+ include(KDEGitCommitHooks)
+ include(ECMGenerateExportHeader)
+ 
+-find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS WaylandClient Qml)
++find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS WaylandClient)
+ 
+ if (Qt6WaylandClient_VERSION VERSION_GREATER_EQUAL "6.10.0")
+     find_package(Qt6WaylandClientPrivate ${QT_MIN_VERSION} REQUIRED NO_MODULE)
+@@ -66,7 +66,7 @@
+ )
+ 
+ add_subdirectory(src)
+-add_subdirectory(tests)
++
+ 
+ set(CMAKECONFIG_INSTALL_DIR ${KDE_INSTALL_CMAKEPACKAGEDIR}/LayerShellQt)
+ install(EXPORT LayerShellQtTargets
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -80,4 +80,4 @@
+     DESTINATION ${KDE_INSTALL_INCLUDEDIR}/LayerShellQt COMPONENT Devel
+ )
+ 
+-add_subdirectory(declarative)
++

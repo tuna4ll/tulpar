@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=2.5.0
+revision=1
+tarball_url="https://github.com/lxqt/liblxqt/releases/download/${version}/liblxqt-${version}.tar.xz"
+tarball_blake2b="4fe63726bce96b1b2c5ab9d58445f9a465d2714e6ee5fc8ab20acba48005c7e5e46e0aa2aea98970d1a55590ed8e3c7a66c013fa29ed8f4830079acb321dca46"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base qt6-svg libqtxdg kwindowsystem polkit-qt-1 libx11 libxscrnsaver lxqt-build-tools"
+
+configure() {
+    qt_cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

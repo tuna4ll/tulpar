@@ -1,0 +1,27 @@
+#! /bin/sh
+
+version=2.5.0
+revision=1
+tarball_url="https://github.com/lxqt/lxqt-session/releases/download/${version}/lxqt-session-${version}.tar.xz"
+tarball_blake2b="cc75bcc27073c92b77b8f0ac146eeb53d0a43eefdfbd5741c2c7a27e568ec48ed208edaa478bb2257d6fbec5431bcfc4804eb9b2f5c837f859e5aa186c8c8604"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools xdg-user-dirs"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base liblxqt libqtxdg qtxdg-tools kwindowsystem layer-shell-qt libx11 procps-ng xdg-user-dirs libudev-zero adwaita-icon-theme-legacy lxqt-build-tools"
+
+configure() {
+    qt_cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    # Breeze is not packaged; Tulpar's icons are Adwaita's PNG set.
+    sed -i 's/^icon_theme=breeze$/icon_theme=AdwaitaLegacy/' "${dest_dir}${prefix}"/share/lxqt/lxqt.conf
+    grep -q '^icon_theme=AdwaitaLegacy$' "${dest_dir}${prefix}"/share/lxqt/lxqt.conf
+
+    post_package_strip
+}
