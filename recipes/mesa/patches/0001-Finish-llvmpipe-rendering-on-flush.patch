@@ -1,0 +1,23 @@
+Finish llvmpipe rendering on every flush, since Tunix has no dma-buf fences to make
+the compositor or the display wait for it, and they would read half-drawn frames.
+
+--- a/src/gallium/drivers/llvmpipe/lp_context.c
++++ b/src/gallium/drivers/llvmpipe/lp_context.c
+@@ -124,7 +124,16 @@
+          struct pipe_fence_handle **fence,
+          unsigned flags)
+ {
+-   llvmpipe_flush(pipe, fence, __func__);
++   /* Tunix has no dma-buf fences, so the compositor or display that reads
++    * the buffer next cannot wait for the rasterizer threads: finish here. */
++   struct pipe_fence_handle *done = NULL;
++   llvmpipe_flush(pipe, &done, __func__);
++   if (done) {
++      pipe->screen->fence_finish(pipe->screen, NULL, done, OS_TIMEOUT_INFINITE);
++      if (fence)
++         pipe->screen->fence_reference(pipe->screen, fence, done);
++      pipe->screen->fence_reference(pipe->screen, &done, NULL);
++   }
+ }
+ 
+ 
