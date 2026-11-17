@@ -1,0 +1,8 @@
+#! /bin/sh
+
+skip_pkg_check=yes
+version=1.28
+revision=1
+
+# The MATE desktop, started with mate-session.
+deps="dbus librsvg mate-session-manager marco mate-settings-daemon mate-panel caja mate-terminal mate-notification-daemon mate-polkit mate-themes mate-icon-theme"

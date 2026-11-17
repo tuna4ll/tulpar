@@ -1,0 +1,29 @@
+#! /bin/sh
+
+version=1.28.1
+revision=1
+tarball_url="https://github.com/mate-desktop/mate-polkit/releases/download/v${version}/mate-polkit-${version}.tar.xz"
+tarball_blake2b="6ded6349b5e61c3b233365dd9d57377349416a813f7fc002fe15ee9d7f68ab1b006a5b19655222f8ca99a8e94bc2c55679f16ce080c5b489d2ba82f6384da7ce"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin gettext itstool"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 gtk3 polkit"
+
+configure() {
+    meson_configure \
+        -Daccountsservice=false \
+        -Dappindicator=no
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+    rm -f "${dest_dir}${prefix}/share/glib-2.0/schemas/gschemas.compiled"
+    rm -f "${dest_dir}${prefix}/share/icons/"*/icon-theme.cache
+
+    post_package_strip
+
+    generate_glib_schemas_hook
+}

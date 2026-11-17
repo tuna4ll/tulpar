@@ -1,0 +1,29 @@
+#! /bin/sh
+
+version=0.12
+revision=1
+tarball_url="https://www.freedesktop.org/software/startup-notification/releases/startup-notification-${version}.tar.gz"
+tarball_blake2b="9822de9745fdeef28d7c6422d2a967394ffc329e7f37e1676c79e900f8e776578698ef47ff199fa05aa795540382f5eab5cb63f6cb20512328897236df1ab152"
+source_imagedeps="autotools-dev"
+hostdeps="gcc pkg-config"
+deps="core-libs libx11 libxcb xcb-util"
+
+prepare() {
+    # Its config.sub is too old to know aarch64 with a vendor field.
+    cp /usr/share/misc/config.sub /usr/share/misc/config.guess ./
+}
+
+configure() {
+    autotools_configure \
+        lf_cv_sane_realloc=yes
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

@@ -1,0 +1,32 @@
+#! /bin/sh
+
+version=1.28.7
+revision=1
+tarball_url="https://github.com/mate-desktop/mate-panel/releases/download/v${version}/mate-panel-${version}.tar.xz"
+tarball_blake2b="1649bc3d115ee37e70870d147f04036aaeea76a2319931ef5783ccd11fc1903efd9637ece54a0ca8255fefa728e40cc6b4b60a789d300515f715ae8dd3a4342c"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin gettext itstool"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 gtk3 dconf mate-desktop mate-menus libmateweather libwnck libsm libice"
+
+configure() {
+    autotools_configure \
+        --disable-schemas-compile \
+        --with-in-process-applets=all \
+        --enable-x11 \
+        --disable-wayland
+}
+
+build() {
+    # Some Makefiles ask a bare pkg-config, which a cross build lacks, for it.
+    make -j${parallelism} GLIB_GENMARSHAL=/usr/bin/glib-genmarshal
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+    rm -f "${dest_dir}${prefix}/share/glib-2.0/schemas/gschemas.compiled"
+    rm -f "${dest_dir}${prefix}/share/icons/"*/icon-theme.cache
+
+    post_package_strip
+
+    generate_glib_schemas_hook
+}

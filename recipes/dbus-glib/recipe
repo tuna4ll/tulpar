@@ -1,0 +1,29 @@
+#! /bin/sh
+
+version=0.112
+revision=1
+tarball_url="https://dbus.freedesktop.org/releases/dbus-glib/dbus-glib-${version}.tar.gz"
+tarball_blake2b="24e1c222f0116b32c109682816f6c35771647f4c63cab93a6621bd68b71ea4dca62fbf9e6bb360386b8658146dbf34b0d7dc471db7525585412d120340c4c969"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin libdbus-glib-1-dev-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 dbus libexpat"
+
+configure() {
+    # It names variables bool, a keyword since C23.
+    TARGET_CFLAGS="$TARGET_CFLAGS -std=gnu17" \
+    autotools_configure \
+        --disable-gtk-doc \
+        --disable-bash-completion \
+        --with-dbus-binding-tool=/usr/bin/dbus-binding-tool \
+        ac_cv_have_abstract_sockets=yes
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

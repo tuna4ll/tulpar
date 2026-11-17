@@ -1,0 +1,36 @@
+#! /bin/sh
+
+version=1.28.1
+revision=1
+tarball_url="https://github.com/mate-desktop/caja/releases/download/v${version}/caja-${version}.tar.xz"
+tarball_blake2b="4ffecfbf062a7cde798d85de044769440aa347eb6fc0a69be2ecbfc44ad595bb3e19e9df26f906bcccb4bcb2e515db7188cb8916580aec1fddeb4800577bde89"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin gettext itstool"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 gtk3 mate-desktop libxml2 libnotify libexif libsm libice pango"
+
+configure() {
+    autotools_configure \
+        --disable-schemas-compile \
+        --disable-xmp \
+        --disable-packagekit \
+        --disable-self-check \
+        --disable-update-mimedb \
+        --disable-icon-update \
+        --disable-wayland \
+        --disable-introspection
+}
+
+build() {
+    # Some Makefiles ask a bare pkg-config, which a cross build lacks, for it.
+    make -j${parallelism} GLIB_GENMARSHAL=/usr/bin/glib-genmarshal
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+    rm -f "${dest_dir}${prefix}/share/glib-2.0/schemas/gschemas.compiled"
+    rm -f "${dest_dir}${prefix}/share/icons/"*/icon-theme.cache
+
+    post_package_strip
+
+    generate_glib_schemas_hook
+}

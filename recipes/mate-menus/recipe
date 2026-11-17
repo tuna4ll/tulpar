@@ -1,0 +1,27 @@
+#! /bin/sh
+
+version=1.28.1
+revision=1
+tarball_url="https://github.com/mate-desktop/mate-menus/releases/download/v${version}/mate-menus-${version}.tar.xz"
+tarball_blake2b="c2be19304cd88bf6da88f5cd65ed463b8d9fdf6d4064a802b8a65c736642293f367ebe9d3cf7306d14cd34c827c08bae11348e847ece4e05a981f75797b16e87"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin gettext itstool"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2"
+
+configure() {
+    autotools_configure \
+        --disable-introspection
+}
+
+build() {
+    # Some Makefiles ask a bare pkg-config, which a cross build lacks, for it.
+    make -j${parallelism} GLIB_GENMARSHAL=/usr/bin/glib-genmarshal
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+    rm -f "${dest_dir}${prefix}/share/glib-2.0/schemas/gschemas.compiled"
+    rm -f "${dest_dir}${prefix}/share/icons/"*/icon-theme.cache
+
+    post_package_strip
+}

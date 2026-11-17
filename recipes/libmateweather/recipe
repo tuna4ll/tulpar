@@ -1,0 +1,32 @@
+#! /bin/sh
+
+version=1.28.2
+revision=1
+tarball_url="https://github.com/mate-desktop/libmateweather/releases/download/v${version}/libmateweather-${version}.tar.xz"
+tarball_blake2b="2b08a95f00195734aad1c4bc9a67fe685a5bd9dcdea2572664644a399a1369c83335d76799ceacd6b53ca707ccb21a74f9a7abe535a36ef68957c5acbc245d43"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin gettext itstool"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 gtk3 libxml2 libsoup2 glib-networking tzdata"
+
+configure() {
+    autotools_configure \
+        --disable-icon-update \
+        --disable-schemas-compile \
+        --with-zoneinfo-dir=/usr/share/zoneinfo \
+        --disable-python
+}
+
+build() {
+    # Some Makefiles ask a bare pkg-config, which a cross build lacks, for it.
+    make -j${parallelism} GLIB_GENMARSHAL=/usr/bin/glib-genmarshal
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+    rm -f "${dest_dir}${prefix}/share/glib-2.0/schemas/gschemas.compiled"
+    rm -f "${dest_dir}${prefix}/share/icons/"*/icon-theme.cache
+
+    post_package_strip
+
+    generate_glib_schemas_hook
+}

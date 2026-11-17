@@ -1,0 +1,27 @@
+#! /bin/sh
+
+version=3.22.26
+revision=1
+tarball_url="https://github.com/mate-desktop/mate-themes/releases/download/v${version}/mate-themes-${version}.tar.xz"
+tarball_blake2b="e66d397be02df8f91b972e5073397019627508f90f8100e25601d93a77f72e368b57e1c664d72972f097f880c301c534c0cc06479637df39d16b8c9382b192d2"
+imagedeps="libglib2.0-dev-bin libglib2.0-bin gettext itstool"
+hostdeps="gcc pkg-config"
+deps="gtk3 librsvg"
+
+configure() {
+    # The themes are only data; the GTK 2 check it makes is never used.
+    THEME_ENGINE_CFLAGS=" " THEME_ENGINE_LIBS=" " \
+    autotools_configure
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+    rm -f "${dest_dir}${prefix}/share/glib-2.0/schemas/gschemas.compiled"
+    rm -f "${dest_dir}${prefix}/share/icons/"*/icon-theme.cache
+
+    post_package_strip
+}

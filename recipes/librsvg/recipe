@@ -1,0 +1,75 @@
+#! /bin/sh
+
+version=2.61.3
+revision=1
+tarball_url="https://download.gnome.org/sources/librsvg/2.61/librsvg-${version}.tar.xz"
+tarball_blake2b="72e4cda31e070784fe363d9e08ccb760429e63f8620d6050dcf1370727f7e51da6dd2daf4f5d714d6c9aa1fecf817b1c84f00c3952daffeec42b4113b2afa14d"
+source_allow_network=yes
+source_hostdeps="rust"
+source_imagedeps="curl ca-certificates"
+hostdeps="gcc pkg-config rust"
+imagedeps="build-essential python3 libglib2.0-dev-bin libgdk-pixbuf2.0-bin"
+deps="core-libs libgcc cairo pango gdk-pixbuf glib2 libxml2 freetype2 harfbuzz"
+
+_cargo_c_version=0.10.26
+_cargo_c_blake2b=a4f86a7f2f8b046c6e43a280c75268d8346be8eccba9eb1e50f21c2b77c12a205c51f64129923970ac80e547948d411efbc43f6771e8aba7e9c3f82313264f09
+
+prepare() {
+    CARGO_HOME="${source_dir}/.jinx-cargo-home" cargo fetch --locked
+
+    # librsvg builds its C library with cargo-c, which runs on the build machine.
+    mkdir -p .jinx-cargo-c
+    curl -fLo .jinx-cargo-c/cargo-c.tar.gz \
+        "https://github.com/lu-zero/cargo-c/releases/download/v${_cargo_c_version}/cargo-c-x86_64-unknown-linux-musl.tar.gz"
+    echo "${_cargo_c_blake2b}  .jinx-cargo-c/cargo-c.tar.gz" | b2sum -c
+    tar -xzf .jinx-cargo-c/cargo-c.tar.gz -C .jinx-cargo-c
+    rm .jinx-cargo-c/cargo-c.tar.gz
+}
+
+_cargo_env() {
+    _triple_var=$(echo "${OS_TRIPLET_RUST}" | tr a-z- A-Z_)
+    export PATH="${source_dir}/.jinx-cargo-c:${PATH}"
+    export CARGO_HOME="${source_dir}/.jinx-cargo-home"
+    export CARGO_NET_OFFLINE=true
+    export "CARGO_TARGET_${_triple_var}_LINKER=${OS_TRIPLET}-gcc"
+    export "CARGO_TARGET_${_triple_var}_RUSTFLAGS=${TARGET_RUSTFLAGS}"
+    export "CC_$(echo "${OS_TRIPLET_RUST}" | tr - _)=${OS_TRIPLET}-gcc"
+    export PKG_CONFIG_ALLOW_CROSS=1
+    export PKG_CONFIG="${OS_TRIPLET}-pkg-config"
+}
+
+configure() {
+    _cargo_env
+    meson_configure \
+        -Dtriplet=${OS_TRIPLET_RUST} \
+        -Dintrospection=disabled \
+        -Dvala=disabled \
+        -Ddocs=disabled \
+        -Dtests=false \
+        -Davif=disabled \
+        -Dpixbuf=enabled \
+        -Dpixbuf-loader=enabled \
+        -Drsvg-convert=enabled
+}
+
+build() {
+    _cargo_env
+    # The pixbuf loader links the librsvg built here, which meson describes
+    # in meson-uninstalled but only puts on the search path for subprojects,
+    # and pkg-config would put the sysroot in front of its build directory.
+    export PKG_CONFIG_PATH="$(pwd -P)/meson-uninstalled"
+    export "CARGO_TARGET_${_triple_var}_RUSTFLAGS=${TARGET_RUSTFLAGS} -L native=$(pwd -P)/rsvg"
+    meson compile -j${parallelism}
+}
+
+package() {
+    _cargo_env
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+    # meson takes the loader directory from pkg-config, sysroot and all.
+    cp -a "${dest_dir}${sysroot}${prefix}/." "${dest_dir}${prefix}/"
+    rm -rf "${dest_dir}${sysroot}"
+
+    post_package_strip
+
+    install_hook_add 'gdk-pixbuf-query-loaders --update-cache >/dev/null'
+}
