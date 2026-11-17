@@ -1,0 +1,35 @@
+#! /bin/sh
+
+# kitty's own release bundle, which carries its Python and most libraries:
+# building kitty runs the built kitty to compile its shaders, which a cross
+# build cannot do.
+version=0.50.0
+revision=1
+tarball_url="https://github.com/kovidgoyal/kitty/releases/download/v${version}/kitty-${version}-x86_64.txz"
+tarball_blake2b="a74e1007a4cba3b39c7aa396b730d5c3d14621f8ce572f69628f0abece20b1252ad011bec150c266f3db431f25f079cf847236ea251452315db5cf06b54157f7"
+deps="core-libs dbus fontconfig libstdc++ libx11 libxcb libxcursor mesa util-linux"
+
+# The sources are shared between architectures, so the arm64 bundle sits next
+# to the x86_64 one.
+early_prepare() {
+    curl -fLo arm64.txz "https://github.com/kovidgoyal/kitty/releases/download/v${version}/kitty-${version}-arm64.txz"
+    b2sum arm64.txz | grep -q '^6a631ab2d70ba081f5b75b04ff83870fc0b9735aa4661ee501be44519954b1487925f2fb926818551312f4f821472112283b01c084d1ffa5c42d2d7d504a95b7 '
+    mkdir aarch64
+    tar -xf arm64.txz -C aarch64
+    rm arm64.txz
+}
+
+package() {
+    _bundle="${source_dir}"
+    [ "${JINX_ARCH}" = aarch64 ] && _bundle="${source_dir}/aarch64"
+
+    mkdir -p "${dest_dir}${prefix}/lib/kitty" "${dest_dir}${prefix}/bin"
+    cp -a "${_bundle}/bin" "${_bundle}/lib" "${_bundle}/share" "${dest_dir}${prefix}/lib/kitty/"
+    ln -s ../lib/kitty/bin/kitty "${dest_dir}${prefix}/bin/kitty"
+    ln -s ../lib/kitty/bin/kitten "${dest_dir}${prefix}/bin/kitten"
+
+    # ncurses already has the xterm-kitty entry.
+    mkdir -p "${dest_dir}${prefix}/share"
+    cp -a "${_bundle}/share/applications" "${_bundle}/share/icons" "${_bundle}/share/man" \
+        "${dest_dir}${prefix}/share/"
+}

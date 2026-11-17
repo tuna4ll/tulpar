@@ -41,6 +41,19 @@ case "${JINX_ARCH}" in
         ;;
 esac
 
+# Rust's own linux-gnu targets fit Tulpar as they are; only the linker is ours.
+OS_TRIPLET_RUST=${JINX_ARCH}-unknown-linux-gnu
+TARGET_RUSTFLAGS="-C force-frame-pointers=yes -C link-arg=-Wl,--sort-common -C link-arg=-Wl,-z,pack-relative-relocs"
+TARGET_RUSTFLAGS="$TARGET_RUSTFLAGS --remap-path-prefix=/base_dir=/usr/src --remap-path-prefix=/build_dir=/usr/src --remap-path-prefix=/sysroot="
+
+cargo_configure() {
+    mkdir -p .cargo
+    cat >.cargo/config.toml <<EOF
+[target.${OS_TRIPLET_RUST}]
+linker = "${OS_TRIPLET}-gcc"
+EOF
+}
+
 post_package_strip() {
     if [ -z "${strip_command-}" ]; then
         strip_command="${OS_TRIPLET}-strip"

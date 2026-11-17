@@ -2,7 +2,7 @@
 
 skip_pkg_check=yes
 version=0.0
-revision=16
+revision=17
 source_dir="base-files"
 deps="core-libs"
 conf_files="/etc/group /etc/locale.conf /etc/locale.gen /etc/nsswitch.conf /etc/passwd"
@@ -12,6 +12,10 @@ conf_files="${conf_files} /home/tulpar/.bash_profile /home/tulpar/.bashrc /home/
 
 package() {
     cp -r ${source_dir}/. "${dest_dir}"/
+    # One GitHub release holds at most 1000 files, so each architecture but
+    # x86_64 has its own.
+    [ "${JINX_ARCH}" = x86_64 ] || sed -i "s|/download/packages\$|/download/packages-${JINX_ARCH}|" \
+        "${dest_dir}/etc/xbps.d/00-repository-main.conf"
 
     install_hook_add 'chown -R 1000:1000 home/tulpar' \
                      'chmod 750 root' \

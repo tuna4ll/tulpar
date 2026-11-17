@@ -37,7 +37,23 @@ for arch in "$@"; do
     XBPS_TARGET_ARCH="${arch}" "${xbps}"/xbps-rindex --sign --signedby "Tulpar" --privkey "${key}" "${pkgs}"
     XBPS_TARGET_ARCH="${arch}" "${xbps}"/xbps-rindex --sign-pkg --privkey "${key}" "${pkgs}"/*.xbps >/dev/null
 
-    sync_release packages "${pkgs}" "${arch}"
+    # A release holds at most 1000 files, so each architecture but x86_64 has
+    # its own, as base-files tells the systems.
+    if [ "${arch}" = x86_64 ]; then
+        sync_release packages "${pkgs}" "${arch}"
+    else
+        sync_release "packages-${arch}" "${pkgs}" "${arch}"
+
+        # Systems from before the split still read the shared release: leave
+        # them only base-files there, which moves them to their own.
+        bridge="build-${arch}/bridge"
+        rm -rf "${bridge}" && mkdir -p "${bridge}"
+        base="$(ls "${pkgs}"/base-files-*."${arch}".xbps | sort -V | tail -1)"
+        cp "${base}" "${base}.sig2" "${bridge}/"
+        XBPS_TARGET_ARCH="${arch}" "${xbps}"/xbps-rindex -a "${bridge}"/*.xbps
+        XBPS_TARGET_ARCH="${arch}" "${xbps}"/xbps-rindex --sign --signedby "Tulpar" --privkey "${key}" "${bridge}"
+        sync_release packages "${bridge}" "${arch}"
+    fi
     # Host tools run on the x86_64 builder but differ per target.
     sync_release "host-${arch}" "build-${arch}/host-pkgs" x86_64
 done

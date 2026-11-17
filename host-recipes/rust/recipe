@@ -1,0 +1,25 @@
+#! /bin/sh
+
+# Rust's own release builds: Tulpar is a plain linux-gnu target, so nothing
+# needs building, only the standard library for each architecture.
+version=1.96.0
+revision=1
+tarball_url="https://static.rust-lang.org/dist/rust-${version}-x86_64-unknown-linux-gnu.tar.xz"
+tarball_blake2b="3ba9dc109c9111dd568d6cbe9de9263a41500297e88a7443c5f8b53cb454cabb2a3a752f2bdc9d787bbfc812fb7095179a655b44198bf758e4592520284b16d4"
+source_imagedeps="curl"
+hostdeps="gcc"
+
+early_prepare() {
+    curl -fLo rust-std-aarch64.tar.xz "https://static.rust-lang.org/dist/rust-std-${version}-aarch64-unknown-linux-gnu.tar.xz"
+    b2sum rust-std-aarch64.tar.xz | grep -q 32ebba088cf272da9c889b6b118d31edcb2d291d7697d3f464c0134fcfb5b8c070271d8caea183263a12d2bd3b30049641969c7c59d4203c6195220c548537bf
+    mkdir rust-std-aarch64
+    tar -xf rust-std-aarch64.tar.xz -C rust-std-aarch64 --strip-components=1
+    rm rust-std-aarch64.tar.xz
+}
+
+package() {
+    "${source_dir}"/install.sh --destdir="${dest_dir}" --prefix="${prefix}" --disable-ldconfig \
+        --components=rustc,cargo,rust-std-x86_64-unknown-linux-gnu
+    "${source_dir}"/rust-std-aarch64/install.sh --destdir="${dest_dir}" --prefix="${prefix}" \
+        --disable-ldconfig
+}

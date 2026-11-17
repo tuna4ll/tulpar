@@ -1,0 +1,50 @@
+#! /bin/sh
+
+version=4.9.3
+revision=1
+tarball_url="https://github.com/fish-shell/fish-shell/releases/download/${version}/fish-${version}.tar.xz"
+tarball_blake2b="551e349c650e6d683c9a0b8e827ea48d71ac514903c8c5cc3515b1ad7b99425b554e750a32dfa7bed40a0069034ae11f6588cba8855cdc60ed629e8c84193b9f"
+source_allow_network=yes
+source_hostdeps="rust"
+hostdeps="gcc pkg-config rust"
+imagedeps="build-essential"
+deps="core-libs pcre2"
+
+prepare() {
+    CARGO_HOME="${source_dir}/.jinx-cargo-home" cargo fetch --locked
+}
+
+configure() {
+    cmake_configure \
+        -DRust_CARGO_TARGET=${OS_TRIPLET_RUST} \
+        -DFISH_USE_SYSTEM_PCRE2=ON \
+        -DWITH_DOCS=OFF \
+        -DWITH_MESSAGE_LOCALIZATION=ON
+}
+
+build() {
+    _triple_var=$(echo "${OS_TRIPLET_RUST}" | tr a-z- A-Z_)
+    env CARGO_HOME="${source_dir}/.jinx-cargo-home" \
+        CARGO_NET_OFFLINE=true \
+        "CARGO_TARGET_${_triple_var}_LINKER=${OS_TRIPLET}-gcc" \
+        "CARGO_TARGET_${_triple_var}_RUSTFLAGS=${TARGET_RUSTFLAGS}" \
+        "CC_$(echo "${OS_TRIPLET_RUST}" | tr - _)=${OS_TRIPLET}-gcc" \
+        PKG_CONFIG_ALLOW_CROSS=1 \
+        PKG_CONFIG="${OS_TRIPLET}-pkg-config" \
+    cmake --build . -j${parallelism} --verbose
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+    # fish is one binary that acts on the name it is called by.
+    ln -sf fish "${dest_dir}${prefix}/bin/fish_indent"
+    ln -sf fish "${dest_dir}${prefix}/bin/fish_key_reader"
+
+    post_package_strip
+
+    install_hook_add 'grep -qxF /usr/bin/fish /etc/shells 2>/dev/null || echo /usr/bin/fish >>/etc/shells'
+
+    remove_hook_add 'if [ -f /etc/shells ]; then
+    sed -i '\''\|^/usr/bin/fish$|d'\'' /etc/shells
+fi'
+}

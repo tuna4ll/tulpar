@@ -11,7 +11,8 @@ dir="${2:-build-${arch}}"
 xbps="$(cd "$(dirname "$0")/.." && pwd)/.jinx-cache/xbps/bin"
 
 mkdir -p "${dir}/pkgs" "${dir}/host-pkgs"
-gh release download packages -R ${repo} -D "${dir}/pkgs" --skip-existing -p "*.${arch}.xbps*"
+rel=packages; [ "${arch}" = x86_64 ] || rel="packages-${arch}"
+gh release download "${rel}" -R ${repo} -D "${dir}/pkgs" --skip-existing -p "*.${arch}.xbps*"
 gh release download "host-${arch}" -R ${repo} -D "${dir}/host-pkgs" --skip-existing -p '*.xbps'
 
 # Index them afresh rather than trusting the published index.

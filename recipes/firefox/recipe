@@ -1,0 +1,57 @@
+#! /bin/sh
+
+# Mozilla's own release build: building Firefox takes Rust, clang, cbindgen,
+# node and hours, and the release runs on any glibc system.
+version=160.0
+revision=1
+tarball_url="https://ftp.mozilla.org/pub/firefox/releases/${version}/linux-x86_64/en-US/firefox-${version}.tar.xz"
+tarball_blake2b="a3fdc5e6593df816f782792f61fee6bd97c35e4442369992ca966070b0ea66435e019a52a9439282c2e8a5501a3857825e06792f7383e010506494c1e31866c9"
+deps="core-libs alsa-lib at-spi2-core cairo dbus fontconfig freetype2 gdk-pixbuf glib2 gtk3 libstdc++ libx11 libxcb libxcomposite libxcursor libxdamage libxext libxfixes libxi libxrandr libxrender mesa pango ttf-dejavu"
+
+# The sources are shared between architectures, so the aarch64 build sits
+# next to the x86_64 one.
+early_prepare() {
+    curl -fLo aarch64.tar.xz "https://ftp.mozilla.org/pub/firefox/releases/${version}/linux-aarch64/en-US/firefox-${version}.tar.xz"
+    b2sum aarch64.tar.xz | grep -q '^1fcd48c0eb931a5d156a30936c8b0189faf12cc932a666bb6ba6e16b3fbdb08f88290a27b66512ef780c4367a64542767b587619fc7be42f20e6fb8a76759ce5 '
+    mkdir aarch64
+    tar -xf aarch64.tar.xz -C aarch64 --strip-components=1
+    rm aarch64.tar.xz
+}
+
+package() {
+    _app="${source_dir}"
+    [ "${JINX_ARCH}" = aarch64 ] && _app="${source_dir}/aarch64"
+
+    mkdir -p "${dest_dir}${prefix}/lib/firefox" "${dest_dir}${prefix}/bin"
+    ( cd "${_app}" && tar -cf - --exclude=./aarch64 . ) | tar -xf - -C "${dest_dir}${prefix}/lib/firefox"
+    ln -s ../lib/firefox/firefox "${dest_dir}${prefix}/bin/firefox"
+
+    # xbps updates Firefox, not Firefox itself.
+    mkdir -p "${dest_dir}${prefix}/lib/firefox/distribution"
+    cat >"${dest_dir}${prefix}/lib/firefox/distribution/policies.json" <<'EOT'
+{
+  "policies": {
+    "DisableAppUpdate": true
+  }
+}
+EOT
+
+    for _s in 16 32 48 64 128; do
+        install -Dm644 "${_app}/browser/chrome/icons/default/default${_s}.png" \
+            "${dest_dir}${prefix}/share/icons/hicolor/${_s}x${_s}/apps/firefox.png"
+    done
+
+    install -Dm644 /dev/stdin "${dest_dir}${prefix}/share/applications/firefox.desktop" <<'EOT'
+[Desktop Entry]
+Type=Application
+Name=Firefox
+GenericName=Web Browser
+Comment=Browse the Web
+Exec=firefox %u
+Icon=firefox
+Terminal=false
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
+StartupWMClass=firefox
+EOT
+}
