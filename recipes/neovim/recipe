@@ -1,0 +1,27 @@
+#! /bin/sh
+
+# Neovim's own release build: building it runs the built nvim and LuaJIT to
+# generate code, which a cross build cannot do.
+version=0.12.6
+revision=1
+tarball_url="https://github.com/neovim/neovim/releases/download/v${version}/nvim-linux-x86_64.tar.gz"
+tarball_blake2b="233ec36b52f9957e8254b791fbff21a331a780be6958e094a0860aba70a10a030cfc95bbff8e696feedb07277a6a3401d2fe2f23b46dcb7c6195cf5ae121cae3"
+deps="core-libs"
+
+# The sources are shared between architectures, so the arm64 build sits next
+# to the x86_64 one.
+early_prepare() {
+    curl -fLo arm64.tar.gz "https://github.com/neovim/neovim/releases/download/v${version}/nvim-linux-arm64.tar.gz"
+    b2sum arm64.tar.gz | grep -q '^1edb1261bd9f96f8bebac2ac447ca0c5677a0217181e1acf541cf251a7194e4ba6f0b6645462cff0edf88aa70813e8b73f982ff587f1eda718123cdcd09c6e2b '
+    mkdir aarch64
+    tar -xf arm64.tar.gz -C aarch64 --strip-components=1
+    rm arm64.tar.gz
+}
+
+package() {
+    _build="${source_dir}"
+    [ "${JINX_ARCH}" = aarch64 ] && _build="${source_dir}/aarch64"
+
+    mkdir -p "${dest_dir}${prefix}"
+    cp -a "${_build}/bin" "${_build}/lib" "${_build}/share" "${dest_dir}${prefix}/"
+}

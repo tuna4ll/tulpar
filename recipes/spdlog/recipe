@@ -1,0 +1,26 @@
+#! /bin/sh
+
+version=1.17.0
+revision=1
+tarball_url="https://github.com/gabime/spdlog/archive/refs/tags/v${version}.tar.gz"
+tarball_blake2b="e8cab0d0de646c71c7494f173ecc356dfee13d5d97a1f208f6141e3923b65bdb9b6e637d8143fc1797c2b123fe94398e21207cd811c95dfc366e5ff3884e5826"
+hostdeps="gcc pkg-config"
+deps="core-libs libstdc++ fmt"
+
+configure() {
+    cmake_configure \
+        -DSPDLOG_BUILD_SHARED=ON \
+        -DSPDLOG_FMT_EXTERNAL=ON \
+        -DSPDLOG_BUILD_EXAMPLE=OFF \
+        -DSPDLOG_BUILD_TESTS=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

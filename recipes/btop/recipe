@@ -1,0 +1,20 @@
+#! /bin/sh
+
+version=1.4.8
+revision=1
+tarball_url="https://github.com/aristocratos/btop/archive/refs/tags/v${version}.tar.gz"
+tarball_blake2b="09cc0ff45610d16b34fe7197edf3e315c4c5fce1ea0b0c9d308fd5b49c76cad1f5df9e2de865d5c3fa59b365c2e86a4b08948cafa8797b403c1e9ec8157f0190"
+hostdeps="gcc pkg-config"
+deps="core-libs libstdc++"
+
+build() {
+    cp -rp "${source_dir}"/. ./
+    make -j${parallelism} CXX="${OS_TRIPLET}-g++" ARCH="${JINX_ARCH}" \
+        GPU_SUPPORT=false ADDFLAGS="${TARGET_CXXFLAGS} ${TARGET_LDFLAGS}"
+}
+
+package() {
+    make install PREFIX="${prefix}" DESTDIR="${dest_dir}"
+
+    post_package_strip
+}

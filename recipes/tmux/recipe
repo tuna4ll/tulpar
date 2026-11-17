@@ -1,0 +1,27 @@
+#! /bin/sh
+
+version=3.8
+revision=1
+tarball_url="https://github.com/tmux/tmux/releases/download/${version}/tmux-${version}.tar.gz"
+tarball_blake2b="5a6ff93e78dd4380fa0769ac76de25365b326dce3403a71eb74f218c124f17b8d27504a7d89985db6fb4d1d0321815657ffc40212a58257363b315515581a82f"
+imagedeps="bison"
+hostdeps="gcc pkg-config"
+deps="core-libs libevent ncurses utf8proc"
+
+configure() {
+    # Installing writes the man page next to its source.
+    cp -rp "${source_dir}"/. ./
+    configure_script_path=./configure \
+    autotools_configure \
+        --enable-utf8proc
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

@@ -1,0 +1,44 @@
+#! /bin/sh
+
+version=1.52.0
+revision=1
+tarball_url="https://github.com/espeak-ng/espeak-ng/archive/refs/tags/${version}.tar.gz"
+tarball_blake2b="ee522a44e0653d5154eefdb1533019d3e78e5af93a08ff97f64680e00f4ddeaa499f0214c82b2d43305e76cfc181011b0224f16b7ebdfcc1523496ef23af00d6"
+source_imagedeps="autoconf automake libtool"
+imagedeps="build-essential"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+prepare() {
+    ./autogen.sh
+    autotools_recursive_regen
+}
+
+configure() {
+    # The voice data is compiled by running espeak-ng, so build it once for
+    # the build machine to compile the data with.
+    rm -rf native
+    cp -rp "${source_dir}" native
+    (cd native && env -i PATH=/usr/bin:/bin ./configure \
+        --with-pcaudiolib=no --with-sonic=no --with-mbrola=no && \
+        env -i PATH=/usr/bin:/bin make -j${parallelism})
+
+    cp -rp "${source_dir}"/. ./
+    configure_script_path=./configure \
+    autotools_configure \
+        --with-pcaudiolib=no \
+        --with-sonic=no \
+        --with-mbrola=no
+}
+
+build() {
+    make -j${parallelism} src/espeak-ng src/speak-ng src/libespeak-ng.la
+    cp -rp native/espeak-ng-data/. espeak-ng-data/
+}
+
+package() {
+    # install-am would rebuild the data with the target espeak-ng.
+    DESTDIR="${dest_dir}" make install-exec-am install-data-am
+
+    post_package_strip
+}

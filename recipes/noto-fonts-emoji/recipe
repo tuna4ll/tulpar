@@ -1,0 +1,23 @@
+#! /bin/sh
+
+repology_id=fonts:noto-emoji
+version=2.057
+revision=1
+_tag=v2026-09-24-unicode18_0
+deps="core-libs fontconfig"
+imagedeps="curl ca-certificates"
+# The font is one file of a repository of hundreds of megabytes: it is
+# downloaded alone and checked.
+allow_network=yes
+
+build() {
+    curl -fLo NotoColorEmoji.ttf \
+        "https://raw.githubusercontent.com/googlefonts/noto-emoji/${_tag}/2D/fonts/NotoColorEmoji.ttf"
+    b2sum NotoColorEmoji.ttf | grep -q '^9fd9f7ae3f615bf9127073d378ed39549aad908d286c54562b7f141877b3d38628540acbeb5519758e354ad179c242f10031b0b73d122c45123f0d8e9f79b3b2 '
+}
+
+package() {
+    install -Dm644 NotoColorEmoji.ttf -t "${dest_dir}${prefix}"/share/fonts/TTF
+
+    generate_font_cache_hook
+}

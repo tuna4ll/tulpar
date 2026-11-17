@@ -1,0 +1,26 @@
+#! /bin/sh
+
+repology_id=7zip
+version=26.06
+revision=1
+tarball_url="https://github.com/ip7z/7zip/releases/download/${version}/7z${version%.*}${version#*.}-src.tar.xz"
+tarball_blake2b="23c75453953028bdb175c5f7cec92b19d6008b97905aa9a7c0adf90ad4479cc787d8ac5abbf72bb2c449bbf4cbb78c26363bb7b3fc32bf7889a484e9f8bc4343"
+hostdeps="gcc pkg-config"
+deps="core-libs libstdc++"
+
+build() {
+    cp -rp "${source_dir}"/. ./
+    # The C and C++ build, without the hand-written assembly that needs uasm.
+    make -C CPP/7zip/Bundles/Alone2 -f ../../cmpl_gcc.mak -j${parallelism} \
+        CROSS_COMPILE="${OS_TRIPLET}-" \
+        CFLAGS_BASE_LIST="-c ${TARGET_CFLAGS}" \
+        CFLAGS_WARN_WALL="-Wall -Wextra" \
+        LDFLAGS_STATIC_2="${TARGET_LDFLAGS}"
+}
+
+package() {
+    install -Dm755 CPP/7zip/Bundles/Alone2/b/g/7zz "${dest_dir}${prefix}/bin/7zz"
+    ln -s 7zz "${dest_dir}${prefix}/bin/7z"
+
+    post_package_strip
+}

@@ -1,0 +1,39 @@
+#! /bin/sh
+
+repology_srcname=unzip
+version=6.0
+revision=1
+tarball_url="https://downloads.sourceforge.net/infozip/unzip60.tar.gz"
+tarball_blake2b="5016d300b4452018a391f4ebc03c6960c068df400a0407c0c60bd7bb5ec5012031f916d8b204a6149ba291c2c35beba40d9b43c76fc093026e79471329ab0e47"
+hostdeps="gcc pkg-config"
+deps="core-libs bzip2"
+
+# Info-ZIP is no longer maintained: Debian's patches carry its fixes,
+# security ones among them.
+_debian=6.0-31
+early_prepare() {
+    curl -fLo debian.tar.xz "https://deb.debian.org/debian/pool/main/u/unzip/unzip_${_debian}.debian.tar.xz"
+    b2sum debian.tar.xz | grep -q '^cec55b499ca41f281f9c72ff8b176ee9c3c51263a49d1888161dc8ba9a779916247c30fdaa1d8c521c5013a5ebd61a3500f4021dc262ad90625948b2a91efba8 '
+    tar -xf debian.tar.xz
+    rm debian.tar.xz
+    for _p in $(grep -v '^#' debian/patches/series); do
+        patch -p1 <"debian/patches/${_p}"
+    done
+}
+
+build() {
+    cp -rp "${source_dir}"/. ./
+    # As Debian builds it.
+    make -f unix/Makefile -j${parallelism} unzips \
+        CC="${OS_TRIPLET}-gcc" \
+        D_USE_BZ2=-DUSE_BZIP2 L_BZ2=-lbz2 LF2="${TARGET_LDFLAGS}" \
+        CF="${TARGET_CFLAGS} -I. -DACORN_FTYPE_NFS -DWILD_STOP_AT_DIR -DLARGE_FILE_SUPPORT -DUNICODE_SUPPORT -DUNICODE_WCHAR -DUTF8_MAYBE_NATIVE -DNO_LCHMOD -DDATE_FORMAT=DF_YMD -DUSE_BZIP2 -DIZ_HAVE_UXUIDGID -DNOMEMCPY -DNO_WORKING_ISPRINT"
+}
+
+package() {
+    make -f unix/Makefile install prefix="${dest_dir}${prefix}" \
+        MANDIR="${dest_dir}${prefix}/share/man/man1"
+    ln -sf unzip "${dest_dir}${prefix}/bin/zipinfo"
+
+    post_package_strip
+}

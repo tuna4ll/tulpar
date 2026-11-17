@@ -1,0 +1,76 @@
+Find sound cards and mark them initialized, as udev would. PipeWire finds
+sound devices through their cards, which have no device node and so are not
+in /sys/dev, and ignores a card that udev's alsa-restore rules have not marked
+initialized, which nothing does without a udev daemon.
+
+--- a/udev_device.c
++++ b/udev_device.c
+@@ -523,6 +523,19 @@
+ 
+     subsystem = udev_device_get_subsystem(udev_device);
+ 
++    /* udev's alsa-restore rules mark a sound card initialized once its mixer
++     * state is restored, and PipeWire ignores cards that are not. Without a
++     * udev daemon, a card in sysfs is as initialized as it gets. */
++    if (subsystem && strcmp(subsystem, "sound") == 0) {
++        sysname = udev_device_get_sysname(udev_device);
++
++        if (sysname && strncmp(sysname, "card", 4) == 0) {
++            udev_list_entry_add(&udev_device->properties, "SOUND_INITIALIZED", "1", 0);
++        }
++
++        return;
++    }
++
+     if (!subsystem || strcmp(subsystem, "drm") != 0) {
+         return;
+     }
+--- a/udev_enumerate.c
++++ b/udev_enumerate.c
+@@ -313,6 +313,38 @@
+     return ret;
+ }
+ 
++/* Sound cards have no device node, so /sys/dev does not list them, but
++ * PipeWire finds the sound devices through their cards. */
++static void scan_sound_cards(struct udev_enumerate *udev_enumerate)
++{
++    struct udev_enumerate_thread card;
++    pthread_mutex_t mutex;
++    struct dirent **de;
++    int i, cnt;
++
++    cnt = scandir("/sys/class/sound", &de, filter_dot, NULL);
++
++    if (cnt == -1) {
++        return;
++    }
++
++    pthread_mutex_init(&mutex, NULL);
++
++    for (i = 0; i < cnt; i++) {
++        if (strncmp(de[i]->d_name, "card", 4) == 0) {
++            card.mutex = &mutex;
++            card.udev_enumerate = udev_enumerate;
++            snprintf(card.path, sizeof(card.path), "/sys/class/sound/%s", de[i]->d_name);
++            add_device(&card);
++        }
++
++        free(de[i]);
++    }
++
++    free(de);
++    pthread_mutex_destroy(&mutex);
++}
++
+ int udev_enumerate_scan_devices(struct udev_enumerate *udev_enumerate)
+ {
+     const char *path[] = { "/sys/dev/block", "/sys/dev/char", NULL };
+@@ -328,6 +360,7 @@
+         }
+     }
+ 
++    scan_sound_cards(udev_enumerate);
+     return 0;
+ }
+ 

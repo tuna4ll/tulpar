@@ -1,0 +1,9 @@
+#! /bin/sh
+
+skip_pkg_check=yes
+version=0.0
+revision=1
+
+# Sound: PipeWire with WirePlumber, started on demand by PulseAudio clients,
+# and the ALSA tools.
+deps="pipewire wireplumber libpulse alsa-utils"

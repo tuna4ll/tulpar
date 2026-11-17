@@ -1,0 +1,54 @@
+#! /bin/sh
+
+version=0.12.1
+revision=1
+tarball_url="https://github.com/brailcom/speechd/releases/download/${version}/speech-dispatcher-${version}.tar.gz"
+tarball_blake2b="b57babdbc5058a495eaab5059feaaa1d2f1cbc848bc4a1fa6ce0012cbfa9cc42002fc208a3ddba85f02b60b9811ad5a9de5fc9472433359210d097f5834082c9"
+hostdeps="gcc pkg-config"
+deps="core-libs dotconf espeak-ng glib2 libpulse libsndfile"
+
+configure() {
+    autotools_configure \
+        --disable-python \
+        --disable-doc \
+        --without-systemdsystemunitdir \
+        --without-systemduserunitdir \
+        --with-espeak-ng \
+        --without-espeak \
+        --without-flite \
+        --without-ibmtts \
+        --without-voxin \
+        --without-ivona \
+        --without-pico \
+        --without-baratinoo \
+        --without-kali \
+        --with-pulse \
+        --without-pipewire \
+        --without-alsa \
+        --without-oss \
+        --without-nas \
+        --without-libao \
+        --with-default-audio-method=pulse
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    # Only espeak-ng is built here; probing every module for voices at
+    # startup takes longer than clients wait for an autospawned server.
+    sed -i \
+        -e 's|^#AddModule "espeak-ng" |AddModule "espeak-ng" |' \
+        -e 's|^# DefaultModule espeak-ng|DefaultModule espeak-ng|' \
+        "${dest_dir}/etc/speech-dispatcher/speechd.conf"
+    grep -q '^AddModule "espeak-ng"' "${dest_dir}/etc/speech-dispatcher/speechd.conf"
+    grep -q '^DefaultModule espeak-ng' "${dest_dir}/etc/speech-dispatcher/speechd.conf"
+    for m in cicero festival openjtalk espeak-ng-mbrola; do
+        rm "${dest_dir}${prefix}/libexec/speech-dispatcher-modules/sd_${m}"
+    done
+
+    post_package_strip
+}

@@ -1,0 +1,38 @@
+#! /bin/sh
+
+repology_srcname=zip
+version=3.0
+revision=1
+tarball_url="https://downloads.sourceforge.net/infozip/zip30.tar.gz"
+tarball_blake2b="4f78ab75214e4a339ab96c2b0e6e1037596368a5ad7d2839e3568d0eb7491de2ffa7dbed6ae354417cff438005f5b7af7223ed889b616e265df54f05c1f6276e"
+hostdeps="gcc pkg-config"
+deps="core-libs bzip2"
+
+# Info-ZIP is no longer maintained: Debian's patches carry its fixes,
+# security ones among them.
+_debian=3.0-16
+early_prepare() {
+    curl -fLo debian.tar.xz "https://deb.debian.org/debian/pool/main/z/zip/zip_${_debian}.debian.tar.xz"
+    b2sum debian.tar.xz | grep -q '^cd705fcafb72ac4bfa20a1844e26a073856d075f61d3da670aaf09c76e614cf4ad1b5d22f135e9d3e1e0e6417950734cd6db19a38a6ba4cf7852357d60321134 '
+    tar -xf debian.tar.xz
+    rm debian.tar.xz
+    for _p in $(grep -v '^#' debian/patches/series); do
+        patch -p1 <"debian/patches/${_p}"
+    done
+}
+
+build() {
+    cp -rp "${source_dir}"/. ./
+    # As Debian builds it: unix/configure finds out what the target has.
+    make -f unix/Makefile generic \
+        CC="${OS_TRIPLET}-gcc" CPP="${OS_TRIPLET}-gcc -E" \
+        CFLAGS_NOOPT="-I. -DUNIX ${TARGET_CFLAGS}" \
+        LFLAGS1="${TARGET_LDFLAGS}"
+}
+
+package() {
+    make -f unix/Makefile install prefix="${dest_dir}${prefix}" \
+        MANDIR="${dest_dir}${prefix}/share/man/man1"
+
+    post_package_strip
+}

@@ -1,0 +1,28 @@
+#! /bin/sh
+
+version=1.4.1
+revision=1
+tarball_url="https://github.com/williamh/dotconf/archive/refs/tags/v${version}.tar.gz"
+tarball_blake2b="8eb7508b6ca13f0f4cc2ca0c1d889ce7801c3d60d826078a23b68807f1c2fa38fed4e638ac4b1a2ddf9c1e204293e57acce29bbd5cf3d6fd12abb140b6cb0d3e"
+source_imagedeps="autoconf automake libtool"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+prepare() {
+    autoreconf -fvi
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

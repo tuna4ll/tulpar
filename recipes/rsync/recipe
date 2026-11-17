@@ -1,0 +1,28 @@
+#! /bin/sh
+
+version=3.5.2
+revision=1
+tarball_url="https://download.samba.org/pub/rsync/src/rsync-${version}.tar.gz"
+tarball_blake2b="f869e19d12d2960e670e07558e3e7126728729b3765ba66f645f4434df03af2fca832fb8061055dfc6f5e6d8113fe3296610f218eef620b7a6ac924ff8ba8c4d"
+hostdeps="gcc pkg-config"
+deps="core-libs openssl xxhash zstd lz4 zlib libidn2"
+
+configure() {
+    autotools_configure \
+        --with-included-popt \
+        --with-included-zlib=no \
+        --disable-md2man \
+        --disable-roll-simd \
+        --disable-md5-asm \
+        --disable-roll-asm
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

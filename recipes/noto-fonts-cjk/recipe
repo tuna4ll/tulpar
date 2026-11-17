@@ -1,0 +1,18 @@
+#! /bin/sh
+
+repology_id=fonts:noto-cjk
+version=2.004
+revision=1
+zip_url="https://github.com/notofonts/noto-cjk/releases/download/Sans${version}/03_NotoSansCJK-OTC.zip"
+zip_blake2b="6e86b4c3f1a027833e129aa510a15e642c534526f703fe71de6ef1db066c71661289ecce06864a77179d9c84fd625430ea5d81c7f75d9187be03207cadf4d1be"
+deps="core-libs fontconfig"
+
+package() {
+    # Regular and bold, of the seven weights: fontconfig makes up the others,
+    # and they would add 90 MB.
+    install -Dm644 "${source_dir}"/NotoSansCJK-Regular.ttc "${source_dir}"/NotoSansCJK-Bold.ttc \
+        -t "${dest_dir}${prefix}"/share/fonts/OTF
+    install -Dm644 "${source_dir}"/LICENSE "${dest_dir}${prefix}"/share/licenses/noto-fonts-cjk/LICENSE
+
+    generate_font_cache_hook
+}

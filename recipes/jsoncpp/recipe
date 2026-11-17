@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=1.9.8
+revision=1
+tarball_url="https://github.com/open-source-parsers/jsoncpp/archive/refs/tags/${version}.tar.gz"
+tarball_blake2b="5af250cf6d641cc7d8c4897222cc97ccdcf110db0858abf11656835e91eb1976ee82c2cdf26e0b244aa914e2b2d8ca796a9642419f6d567bbd234a6b02bf82ff"
+hostdeps="gcc pkg-config"
+deps="core-libs libstdc++"
+
+configure() {
+    meson_configure \
+        -Dtests=false
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}

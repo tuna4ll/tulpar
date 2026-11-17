@@ -1,0 +1,48 @@
+#! /bin/sh
+
+version=0.5.19
+revision=1
+tarball_url="https://gitlab.freedesktop.org/pipewire/wireplumber/-/archive/${version}/wireplumber-${version}.tar.gz"
+tarball_blake2b="4680224ab63dfcee3681570436b7df734f0d1603ca7538f69f3efa40331b3f405e787cbdfff852e016565532dbaf87badfe75924c61c9b4aacccb81b2e31839c"
+source_allow_network=yes
+source_imagedeps="meson ca-certificates"
+hostdeps="gcc pkg-config"
+imagedeps="build-essential libglib2.0-dev-bin"
+deps="core-libs glib2 pipewire"
+
+prepare() {
+    # Lua comes from its Meson wrap, which builds it as a library with a
+    # pkg-config file, unlike Lua's own Makefile.
+    meson subprojects download lua
+}
+
+configure() {
+    meson_configure \
+        -Dintrospection=disabled \
+        -Ddoc=disabled \
+        -Dsystem-lua=false \
+        -Delogind=disabled \
+        -Dsystemd=disabled \
+        -Dsystemd-system-service=false \
+        -Dsystemd-user-service=false \
+        -Dtests=false \
+        -Ddbus-tests=false
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    # Tulpar has no user services: pipewire starts WirePlumber.
+    install -Dm644 /dev/stdin "${dest_dir}${prefix}/share/pipewire/pipewire.conf.d/10-wireplumber.conf" <<'EOT'
+context.exec = [
+    { path = "/usr/bin/wireplumber" args = ""
+      condition = [ { exec.session-manager = null } { exec.session-manager = true } ] }
+]
+EOT
+
+    post_package_strip
+}

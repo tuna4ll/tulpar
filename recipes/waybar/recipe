@@ -1,0 +1,44 @@
+#! /bin/sh
+
+version=0.16.0
+revision=1
+tarball_url="https://github.com/Alexays/Waybar/archive/refs/tags/${version}.tar.gz"
+tarball_blake2b="8cb2e1fc35219fa507b5d16d9576e5633f1ba5087196dd93868cefd8f07b37865563dbc7bb4116f7a2da326f310381f0b2e735a983f9981df41c59cd32871087"
+imagedeps="libwayland-bin libwayland-dev pkgconf scdoc libglib2.0-dev-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs libstdc++ wayland wayland-protocols gtkmm glibmm libsigc++ gtk-layer-shell jsoncpp spdlog fmt libxkbcommon libinput libudev-zero libevdev libpulse pipewire wireplumber"
+
+configure() {
+    meson_configure \
+        -Dlibinput=enabled \
+        -Dlibudev=enabled \
+        -Dlibevdev=enabled \
+        -Dpulseaudio=enabled \
+        -Dpipewire=enabled \
+        -Dwireplumber=enabled \
+        -Drfkill=enabled \
+        -Dman-pages=enabled \
+        -Dlibnl=disabled \
+        -Dupower_glib=disabled \
+        -Dmpris=disabled \
+        -Dsystemd=disabled \
+        -Ddbusmenu-gtk=disabled \
+        -Dmpd=disabled \
+        -Dsndio=disabled \
+        -Dlogind=disabled \
+        -Djack=disabled \
+        -Dcava=disabled \
+        -Dgps=disabled \
+        -Dwwan=disabled \
+        -Dtests=disabled
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}

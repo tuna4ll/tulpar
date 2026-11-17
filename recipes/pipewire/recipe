@@ -1,0 +1,103 @@
+#! /bin/sh
+
+version=1.6.11
+revision=1
+tarball_url="https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/${version}/pipewire-${version}.tar.gz"
+tarball_blake2b="7c0c83670e5c4332e99ddcd80f68fe15ec7ee7159e807641716e96729f1b1d2a35e08538d1533afd743c338638455fdfac7cf261487a95cbe9bfa55502e1ebff"
+hostdeps="gcc pkg-config"
+imagedeps="build-essential"
+deps="core-libs alsa-lib dbus glib2 libsndfile libudev-zero ncurses readline"
+
+configure() {
+    meson_configure \
+        -Ddocs=disabled \
+        -Dman=disabled \
+        -Dexamples=disabled \
+        -Dtests=disabled \
+        -Dinstalled_tests=disabled \
+        -Dgstreamer=disabled \
+        -Dgstreamer-device-provider=disabled \
+        -Dlibsystemd=disabled \
+        -Dlogind=disabled \
+        -Dsystemd-system-service=disabled \
+        -Dsystemd-user-service=disabled \
+        -Dselinux=disabled \
+        -Dpipewire-alsa=enabled \
+        -Dpipewire-jack=disabled \
+        -Dpipewire-v4l2=disabled \
+        -Dalsa=enabled \
+        -Dbluez5=disabled \
+        -Djack=disabled \
+        -Dv4l2=disabled \
+        -Dlibcamera=disabled \
+        -Dvulkan=disabled \
+        -Dffmpeg=disabled \
+        -Dpw-cat-ffmpeg=disabled \
+        -Dudev=enabled \
+        -Dsdl2=disabled \
+        -Dsndfile=enabled \
+        -Dlibmysofa=disabled \
+        -Dlibpulse=disabled \
+        -Droc=disabled \
+        -Davahi=disabled \
+        -Decho-cancel-webrtc=disabled \
+        -Dlibusb=disabled \
+        -Draop=disabled \
+        -Dlv2=disabled \
+        -Dx11=disabled \
+        -Dx11-xfixes=disabled \
+        -Dlibcanberra=disabled \
+        -Dlegacy-rtkit=false \
+        -Davb=disabled \
+        -Dflatpak=disabled \
+        -Dreadline=enabled \
+        -Dgsettings=disabled \
+        -Dgsettings-pulse-schema=disabled \
+        -Dcompress-offload=disabled \
+        -Dopus=disabled \
+        -Dlibffado=disabled \
+        -Dsnap=disabled \
+        -Debur128=disabled \
+        -Dfftw=disabled \
+        -Donnxruntime=disabled \
+        -Dsession-managers=[]
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    # Tulpar has no user services: pipewire starts its PulseAudio server
+    # itself, as the wireplumber package makes it start WirePlumber...
+    install -Dm644 /dev/stdin "${dest_dir}${prefix}/share/pipewire/pipewire.conf.d/20-pipewire-pulse.conf" <<'EOT'
+context.exec = [
+    { path = "/usr/bin/pipewire" args = "-c pipewire-pulse.conf"
+      condition = [ { exec.pipewire-pulse = null } { exec.pipewire-pulse = true } ] }
+]
+EOT
+
+    # ...and PulseAudio clients start pipewire when it is not running yet.
+    install -Dm755 /dev/stdin "${dest_dir}${prefix}/libexec/tulpar/start-pipewire" <<'EOT'
+#! /bin/sh
+# Started by libpulse, through daemon-binary, when a client finds no server.
+[ -n "${XDG_RUNTIME_DIR}" ] || exit 1
+if ! [ -S "${XDG_RUNTIME_DIR}/pulse/native" ]; then
+    setsid pipewire </dev/null >/dev/null 2>&1 &
+fi
+for _wait in $(seq 50); do
+    [ -S "${XDG_RUNTIME_DIR}/pulse/native" ] && exit 0
+    sleep 0.1
+done
+exit 1
+EOT
+    install -Dm644 /dev/stdin "${dest_dir}/etc/pulse/client.conf.d/50-tulpar-pipewire.conf" <<'EOT'
+# PipeWire is the sound server: start it when a client finds none.
+autospawn = yes
+daemon-binary = /usr/libexec/tulpar/start-pipewire
+EOT
+
+    post_package_strip
+}
