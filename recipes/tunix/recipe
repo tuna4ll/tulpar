@@ -2,12 +2,12 @@
 
 skip_pkg_check=yes
 version=0.1.0git
-revision=11
+revision=12
 git_url="https://github.com/tuna4ll/tunix.git"
 commit=2fd2e5935f275a49a1dd513bd994298b320eaa34
 source_imagedeps="curl git ca-certificates"
 imagedeps="build-essential gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu"
-deps="kmod"
+deps="kmod mtools"
 
 # Must match UTS_RELEASE in include/tunix/uts.h; it names the module directory.
 _release=0.1.0
@@ -34,6 +34,49 @@ build() {
 }
 
 package() {
+    # Limine loads the kernel from the boot partition, which is not mounted:
+    # without this, updates of this package would never be booted. mtools
+    # writes it rather than the kernel's FAT driver, since kernels before
+    # this one hang when writing to FAT.
+    install -Dm755 /dev/stdin "${dest_dir}${prefix}"/libexec/tunix/install-kernel <<'EOF'
+#! /bin/sh
+# Copies the kernel of the tunix package to the boot partition, the second
+# partition of the disk Tulpar's root, the third, is on.
+kernel=/usr/share/tunix/kernel.elf
+name=kernel.elf
+if [ -f /usr/share/tunix/Image ]; then
+    kernel=/usr/share/tunix/Image
+    name=Image
+fi
+root=$(awk '$2 == "/" { print $1; exit }' /proc/mounts)
+case "${root}" in
+    /dev/*[0-9]p3) esp="${root%3}2" ;;
+    /dev/*[a-z]3) esp="${root%3}2" ;;
+    *)
+        echo "tunix: the root, ${root}, is not partition 3 of a Tulpar disk; copy ${kernel} to the boot partition by hand" >&2
+        exit 0
+        ;;
+esac
+# Names on FAT are matched by case, which a Turkish locale gets wrong for i.
+export LC_ALL=C MTOOLS_SKIP_CHECK=1
+if ! mtype -i "${esp}" ::/boot/limine/limine.conf >/dev/null 2>&1; then
+    echo "tunix: ${esp} has no Limine configuration; the kernel was not installed" >&2
+    exit 0
+fi
+# A copy that fails, such as on a full partition, leaves the old kernel alone.
+mdel -i "${esp}" "::/boot/${name}.new" 2>/dev/null
+if ! mcopy -i "${esp}" "${kernel}" "::/boot/${name}.new"; then
+    mdel -i "${esp}" "::/boot/${name}.new" 2>/dev/null
+    echo "tunix: could not copy the kernel to ${esp}; the old one stays" >&2
+    exit 1
+fi
+mdel -i "${esp}" "::/boot/${name}" 2>/dev/null
+mren -i "${esp}" "::/boot/${name}.new" "::/boot/${name}" || exit 1
+sync
+echo "tunix: installed the kernel on ${esp}"
+EOF
+    install_hook_add "/usr/libexec/tunix/install-kernel"
+
     if [ "${JINX_ARCH}" = aarch64 ]; then
         # An arm64 Image, which Limine boots with the Linux protocol.
         install -Dm644 kernel-aarch64-core.img "${dest_dir}${prefix}"/share/tunix/Image

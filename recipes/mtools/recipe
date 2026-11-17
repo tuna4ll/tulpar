@@ -1,0 +1,31 @@
+#! /bin/sh
+
+version=4.0.50
+revision=1
+tarball_url="https://ftp.gnu.org/gnu/mtools/mtools-${version}.tar.bz2"
+tarball_blake2b="63f510b7fdf05e1871d776b8c0e7c47034a8e1e5d655e47cf95c373a1262ce361abffa8a5bc4005fded6cbb50a92ddf0b7de1f13d5645e093a683be9507f347d"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure \
+        --disable-floppyd \
+        --without-x
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    # The manual is in the man pages; the info pages would need texinfo.
+    rm -rf "${dest_dir}${prefix}"/share/info
+
+    post_package_strip
+}

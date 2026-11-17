@@ -1,7 +1,7 @@
 #! /bin/sh
 
 version=2.2.0
-revision=1
+revision=2
 tarball_url="https://smarden.org/runit/runit-${version}.tar.gz"
 tarball_blake2b="46a4b91cf180694a69ade3cabaddb35a89db516ef75e9fc69b8091a5c3570079796b8a4cf227edc74938e182833edcce7af40f01d5cb1b4032993fb094459ede"
 hostdeps="gcc pkg-config"
@@ -32,6 +32,30 @@ package() {
     # Stages, services and the init symlink live in Tulpar's base-files/runit
     # tree, installed by the runit-services package.
     ln -s runit-init "${dest_dir}${prefix}"/bin/init
+
+    # The usual names for halting and rebooting, which runit-init does when
+    # asked with 0 or 6.
+    printf '#!/bin/sh\nexec runit-init 6\n' >"${dest_dir}${prefix}"/bin/reboot
+    printf '#!/bin/sh\nexec runit-init 0\n' >"${dest_dir}${prefix}"/bin/poweroff
+    ln -s poweroff "${dest_dir}${prefix}"/bin/halt
+    install -m755 /dev/stdin "${dest_dir}${prefix}"/bin/shutdown <<'EOF'
+#!/bin/sh
+# shutdown [-r | -h | -P] [now]: only an immediate shutdown is supported.
+level=0
+for argument; do
+    case "${argument}" in
+        -r) level=6 ;;
+        -h | -P | -H) level=0 ;;
+        now | +0) ;;
+        *)
+            echo "shutdown: usage: shutdown [-r | -h | -P] [now]" >&2
+            exit 1
+            ;;
+    esac
+done
+exec runit-init "${level}"
+EOF
+    chmod 755 "${dest_dir}${prefix}"/bin/reboot "${dest_dir}${prefix}"/bin/poweroff
 
     post_package_strip
 }

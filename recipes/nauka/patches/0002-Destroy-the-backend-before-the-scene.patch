@@ -1,0 +1,20 @@
+Destroy the backend before the scene, as upstream nauka now does: destroying
+an output frees its lock background, which the scene would have freed already.
+
+--- a/src/nauka.c
++++ b/src/nauka.c
+@@ -423,13 +423,13 @@
+ 
+   wl_list_remove(&server.set_gamma.link);
+ 
++  wlr_backend_destroy(server.backend);
+   wlr_scene_node_destroy(&server.scene->tree.node);
+   wlr_xcursor_manager_destroy(server.cursor_mgr);
+   wlr_cursor_destroy(server.cursor);
+   config_destroy(&server.config);
+   wlr_allocator_destroy(server.allocator);
+   wlr_renderer_destroy(server.renderer);
+-  wlr_backend_destroy(server.backend);
+   wl_event_source_remove(sigchld_source);
+   wl_display_destroy(server.wl_display);
+   return 0;

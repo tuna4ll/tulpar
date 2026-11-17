@@ -1,0 +1,30 @@
+Allow software rendering and make the runtime directory when the session has
+not, as a shell opened before nauka was installed has not.
+
+--- a/src/nauka.c
++++ b/src/nauka.c
+@@ -8,6 +8,7 @@
+ #include <stdbool.h>
+ #include <stdio.h>
+ #include <stdlib.h>
++#include <sys/stat.h>
+ #include <sys/wait.h>
+ #include <unistd.h>
+ #include <wayland-server-core.h>
+@@ -61,6 +62,16 @@
+ /* For brevity's sake, struct members are annotated where they are used. */
+ int main(int argc, char *argv[]) {
+   wlr_log_init(WLR_DEBUG, NULL);
++  /* Tulpar renders in software, and has no logind to make the runtime
++   * directory: set both up when the session has not, as a shell opened before
++   * nauka was installed has not. */
++  setenv("WLR_RENDERER_ALLOW_SOFTWARE", "1", 0);
++  if (!getenv("XDG_RUNTIME_DIR")) {
++    char runtime_dir[64];
++    snprintf(runtime_dir, sizeof(runtime_dir), "/tmp/runtime-%u", (unsigned)getuid());
++    mkdir(runtime_dir, 0700);
++    setenv("XDG_RUNTIME_DIR", runtime_dir, 1);
++  }
+   char *startup_cmd = NULL;
+ 
+   int c;
