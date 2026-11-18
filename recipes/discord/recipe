@@ -1,0 +1,30 @@
+#! /bin/sh
+
+# Discord's own build, packaged as Arch does: a small launcher that fetches
+# and updates the Discord app itself in the user's home. There is no aarch64
+# build of it.
+version=1.0.170
+revision=1
+tarball_url="https://dl.discordapp.net/apps/linux/${version}/discord-${version}.tar.gz"
+tarball_blake2b="bbe9848a1759f2183731c3ceb9b03797f7407adfc1517b4c830f692540d7f0a30f57be5612008841a0c7ae8de050d82ba1ec272af92e6c12527baaf43b6237ed"
+# What the Discord app links, plus what Arch adds for the libraries it opens at run time.
+deps="core-libs alsa-lib at-spi2-core cairo dbus gtk3 glib2 libcups libexpat libnotify libudev-zero libx11 libxcb libxcomposite libxdamage libxext libxfixes libxkbcommon libxrandr libxscrnsaver mesa nspr nss pango hicolor-icon-theme"
+
+package() {
+    [ "${JINX_ARCH}" = x86_64 ] || { echo "Discord is only built for x86_64" >&2; return 1; }
+    cd "${source_dir}"
+
+    install -Dm755 discord "${dest_dir}${prefix}/share/discord/discord"
+    # Chromium's sandbox needs user namespaces that Tunix does not give it yet,
+    # and Electron would pick X11 even under a Wayland compositor such as nauka,
+    # whatever its auto hint says.
+    install -Dm755 /dev/stdin "${dest_dir}${prefix}/bin/discord" <<'EOF'
+#!/bin/sh
+platform=x11
+[ -n "${WAYLAND_DISPLAY}" ] && platform=wayland
+exec /usr/share/discord/discord --no-sandbox --ozone-platform=${platform} "$@"
+EOF
+    install -Dm755 updater_bootstrap "${dest_dir}${prefix}/share/discord/updater_bootstrap"
+    install -Dm644 discord.desktop "${dest_dir}${prefix}/share/applications/discord.desktop"
+    install -Dm644 discord.png "${dest_dir}${prefix}/share/icons/hicolor/256x256/apps/discord.png"
+}

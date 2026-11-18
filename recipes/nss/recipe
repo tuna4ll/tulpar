@@ -1,0 +1,48 @@
+#! /bin/sh
+
+version=3.133
+revision=1
+tarball_url="https://archive.mozilla.org/pub/security/nss/releases/NSS_$(echo ${version} | tr . _)_RTM/src/nss-${version}.tar.gz"
+tarball_blake2b="3d3c10ded63fb025dc4749122074bc1d5cc1722d2cecb2530d9de19be5f8b12f7b5bbe3b625ec29b90bf16aa11a0d6c8b5b57b18ff797a9244f476f03b93c67f"
+imagedeps="build-essential"
+hostdeps="gcc pkg-config"
+deps="core-libs nspr sqlite zlib"
+
+build() {
+    # NSS builds next to its sources, into ../dist.
+    cp -rp "${source_dir}"/. ./
+    # CROSS_COMPILE skips signing the softoken with shlibsign, which would run
+    # a target program; the .chk files it writes only matter in FIPS mode.
+    # CC comes from the environment: on the command line it would override
+    # NATIVE_CC, which builds nsinstall to run on the build machine.
+    CC=${OS_TRIPLET}-gcc CCC=${OS_TRIPLET}-g++ \
+    make -C nss -j${parallelism} \
+        BUILD_OPT=1 \
+        USE_64=1 \
+        CROSS_COMPILE=1 \
+        OS_TEST=${JINX_ARCH} \
+        RANLIB=${OS_TRIPLET}-ranlib \
+        NATIVE_CC=gcc \
+        NSPR_INCLUDE_DIR="${sysroot}${prefix}/include/nspr" \
+        NSPR_LIB_DIR="${sysroot}${prefix}/lib" \
+        USE_SYSTEM_ZLIB=1 \
+        ZLIB_LIBS=-lz \
+        NSS_USE_SYSTEM_SQLITE=1 \
+        NSS_ENABLE_WERROR=0 \
+        NSS_DISABLE_GTESTS=1
+}
+
+package() {
+    cd dist
+    install -d "${dest_dir}${prefix}/lib/pkgconfig" "${dest_dir}${prefix}/bin" "${dest_dir}${prefix}/include/nss"
+    install -m755 Linux*/lib/*.so "${dest_dir}${prefix}/lib/"
+    rm "${dest_dir}${prefix}/lib/libnssckbi-testlib.so"
+    cp -RL public/nss/. private/nss/. "${dest_dir}${prefix}/include/nss/"
+    install -m755 Linux*/bin/certutil Linux*/bin/pk12util "${dest_dir}${prefix}/bin/"
+    sed -e "s|%prefix%|${prefix}|" -e "s|%exec_prefix%|${prefix}|" \
+        -e "s|%libdir%|${prefix}/lib|" -e "s|%includedir%|${prefix}/include/nss|" \
+        -e "s|%NSS_VERSION%|${version}|" -e "s|%NSPR_VERSION%|4.40|" \
+        ../nss/pkg/pkg-config/nss.pc.in > "${dest_dir}${prefix}/lib/pkgconfig/nss.pc"
+
+    post_package_strip
+}

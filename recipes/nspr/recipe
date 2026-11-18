@@ -1,0 +1,32 @@
+#! /bin/sh
+
+version=4.40
+revision=1
+tarball_url="https://archive.mozilla.org/pub/nspr/releases/v${version}/src/nspr-${version}.tar.gz"
+tarball_blake2b="91fcb301f001068190c9a0e0c792d7decb46bc56c26a7f2b0001aa4b322c71d2bfaecfa7f3467befb7ec1dfecd31694f164cdc3f1c49abcc30c3859896e3f1ac"
+imagedeps="build-essential"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    # nsinstall and now, tools the build runs, are built with HOST_CC and
+    # would otherwise get the target's CFLAGS.
+    HOST_CC=gcc HOST_CFLAGS=-O2 HOST_LDFLAGS= \
+    configure_script_path="${source_dir}/nspr/configure" \
+    autotools_configure \
+        --with-mozilla \
+        --with-pthreads \
+        --enable-64bit
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+    rm -f "${dest_dir}${prefix}"/lib/*.a
+    rm -f "${dest_dir}${prefix}"/bin/compile-et.pl "${dest_dir}${prefix}"/bin/prerr.properties
+
+    post_package_strip
+}
