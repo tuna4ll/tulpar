@@ -2,9 +2,9 @@
 
 skip_pkg_check=yes
 version=0.1.0git
-revision=20
+revision=21
 git_url="https://github.com/tuna4ll/tunix.git"
-commit=617853efe201fb85d9a0cc0c4ec1413545cf9f51
+commit=8e30cb08d5025ca3e5db07c059cde7b8c0d0b9ad
 source_imagedeps="curl git ca-certificates"
 imagedeps="build-essential gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu"
 deps="kmod mtools"

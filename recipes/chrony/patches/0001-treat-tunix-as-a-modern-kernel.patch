@@ -1,0 +1,16 @@
+--- a/sys_linux.c	2026-11-22 19:07:30.152947439 +0300
++++ b/sys_linux.c	2026-11-22 19:07:30.162711258 +0300
+@@ -250,6 +250,13 @@
+     LOG_FATAL("uname() failed");
+ 
+   *patch = 0;
++  /* Tunix numbers its own releases; its adjtimex() acts as that of Linux 4.19
++     and later: frequency changes take effect at once, ADJ_SETOFFSET exists. */
++  if (strcmp(uts.sysname, "Tunix") == 0) {
++    *major = 4;
++    *minor = 19;
++    return;
++  }
+   if (sscanf(uts.release, "%d.%d.%d", major, minor, patch) < 2)
+     LOG_FATAL("Could not parse kernel version");
+ }

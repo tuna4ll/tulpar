@@ -1,19 +1,20 @@
 #! /bin/sh
 
-# Only the libraries: polkit-qt and liblxqt link them; there is no polkit daemon on Tulpar.
+# The daemon too: elogind asks it whether a session may power off or reboot.
 version=128
-revision=1
+revision=2
 tarball_url="https://github.com/polkit-org/polkit/archive/refs/tags/${version}.tar.gz"
 tarball_blake2b="4ccdb80a7023b7154565fee306c59e2cadc39fedb6f671a195f37774e7bea34b693e04616281100c8d4e83e91dc36092134aba63724097356cdbc0087fbc97a5"
 imagedeps="libglib2.0-dev-bin"
 hostdeps="gcc pkg-config"
-deps="core-libs glib2 libexpat duktape"
+deps="core-libs glib2 libexpat duktape linux-pam elogind dbus"
 
 configure() {
     meson_configure \
-        -Dlibs-only=true \
-        -Dauthfw=shadow \
-        -Dsession_tracking=ConsoleKit \
+        -Dlibs-only=false \
+        -Dauthfw=pam \
+        -Dsession_tracking=elogind \
+        -Dpolkitd_user=polkitd \
         -Dintrospection=false \
         -Dexamples=false \
         -Dtests=false \
@@ -27,6 +28,27 @@ build() {
 
 package() {
     DESTDIR="${dest_dir}" meson install --no-rebuild
+    # meson took the bus's directory from pkg-config with the sysroot in front.
+    mkdir -p "${dest_dir}${prefix}"/share/dbus-1
+    cp -a "${dest_dir}"/sysroot${prefix}/share/dbus-1/. "${dest_dir}${prefix}"/share/dbus-1/
+    rm -rf "${dest_dir}"/sysroot "${dest_dir}${prefix}"/lib/systemd \
+        "${dest_dir}${prefix}"/lib/sysusers.d "${dest_dir}${prefix}"/lib/tmpfiles.d
+
+    # Tulpar's accounts have no passwords, so pam_unix takes an empty one.
+    install -Dm644 /dev/stdin "${dest_dir}"/etc/pam.d/polkit-1 <<'PAM'
+#%PAM-1.0
+auth     required pam_unix.so nullok
+account  required pam_unix.so
+password required pam_unix.so nullok yescrypt
+session  required pam_unix.so
+PAM
+    chmod 4755 "${dest_dir}${prefix}"/lib/polkit-1/polkit-agent-helper-1
 
     post_package_strip
+
+    install_hook_add 'mkdir -p /etc/polkit-1/rules.d' \
+                     'getent group polkitd >/dev/null || groupadd -r polkitd' \
+                     'getent passwd polkitd >/dev/null || useradd -r -g polkitd -d /etc/polkit-1/rules.d -s /bin/false -c "PolicyKit daemon" polkitd' \
+                     'chown polkitd:root /etc/polkit-1/rules.d /usr/share/polkit-1/rules.d' \
+                     'chmod 0750 /etc/polkit-1/rules.d /usr/share/polkit-1/rules.d'
 }

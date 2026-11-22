@@ -1,0 +1,54 @@
+#! /bin/sh
+
+version=4.9
+revision=1
+tarball_url="https://chrony-project.org/releases/chrony-${version}.tar.gz"
+tarball_blake2b="e1bcfa05c040d0f04aa39f2c01d7877ba2bcd87829d09b3a72079fd5e6930a17d3f022d0c4795488c6f9a9cb77020cb10845dbfba05dc59f0f2297d500fc8e1a"
+hostdeps="gcc pkg-config"
+deps="core-libs gnutls nettle libcap"
+
+build() {
+    cp -rp "${source_dir}"/. ./
+    # chrony's own configure, as Arch runs it, for the target; no seccomp
+    # filter or line editing, which Tulpar has no libraries for.
+    CC=${OS_TRIPLET}-gcc \
+    CFLAGS="$TARGET_CFLAGS" \
+    LDFLAGS="$TARGET_LDFLAGS" \
+    PKG_CONFIG=${OS_TRIPLET}-pkg-config \
+    ./configure \
+        --prefix=${prefix} \
+        --sbindir=${prefix}/bin \
+        --host-system=Linux \
+        --host-machine=${OS_TRIPLET%%-*} \
+        --with-user=chrony \
+        --with-pidfile=/run/chrony/chronyd.pid \
+        --without-editline
+    make -j${parallelism}
+}
+
+package() {
+    make DESTDIR="${dest_dir}" install
+
+    # Arch's configuration: pool servers, a drift file, and a step at boot
+    # when the clock is more than a second off; no rtcsync, as Tunix does not
+    # write the system time back to the RTC.
+    install -Dm644 /dev/stdin "${dest_dir}"/etc/chrony.conf <<'CONF'
+pool pool.ntp.org iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+leapseclist /usr/share/zoneinfo/leap-seconds.list
+CONF
+
+    install -Dm755 /dev/stdin "${dest_dir}"/etc/sv/chronyd/run <<'RUN'
+#!/bin/sh
+install -d -o chrony -g chrony -m 0750 /var/lib/chrony /run/chrony
+exec chronyd -n -u chrony
+RUN
+    mkdir -p "${dest_dir}"/etc/runit/runsvdir/default
+    ln -s /etc/sv/chronyd "${dest_dir}"/etc/runit/runsvdir/default/chronyd
+
+    post_package_strip
+
+    install_hook_add 'getent group chrony >/dev/null || groupadd -r chrony' \
+                     'getent passwd chrony >/dev/null || useradd -r -g chrony -d /var/lib/chrony -s /bin/false -c "Network Time Protocol" chrony'
+}

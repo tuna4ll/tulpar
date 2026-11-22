@@ -1,0 +1,87 @@
+#! /bin/sh
+
+version=252.39
+revision=1
+tarball_url="https://github.com/elogind/elogind/archive/v${version}.tar.gz"
+tarball_blake2b="f66b558da8db2669cfdc625a75b869de26f85cb46071adad59263ac1ba71520beaaca2af752cf19a14e8cd7c0b5dcdb9a9b9fe5222cf714438dc33b133e21ca1"
+imagedeps="gperf python3-jinja2 libglib2.0-dev-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs dbus linux-pam libcap libudev-zero libxcrypt util-linux"
+
+configure() {
+    # As Void builds it for runit: its own cgroup v1 hierarchy, and power
+    # through runit's poweroff and reboot.
+    meson_configure \
+        -Dmode=release \
+        -Drootlibdir=${prefix}/lib \
+        -Drootlibexecdir=${prefix}/libexec/elogind \
+        -Dcgroup-controller=elogind \
+        -Ddefault-hierarchy=legacy \
+        -Ddefault-kill-user-processes=false \
+        -Dhalt-path=${prefix}/bin/halt \
+        -Dpoweroff-path=${prefix}/bin/poweroff \
+        -Dreboot-path=${prefix}/bin/reboot \
+        -Dkexec-path=${prefix}/bin/kexec \
+        -Dpolkit=true \
+        -Dpam=true \
+        -Dacl=false \
+        -Dselinux=false \
+        -Daudit=false \
+        -Dsmack=false \
+        -Dman=false \
+        -Dhtml=false \
+        -Dtests=false \
+        -Dutmp=true \
+        -Ddbuspolicydir=${prefix}/share/dbus-1/system.d \
+        -Ddbussystemservicedir=${prefix}/share/dbus-1/system-services
+}
+
+build() {
+    meson compile -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    # runit runs elogind; a bus-activated second copy would race it.
+    rm -f "${dest_dir}${prefix}"/share/dbus-1/system-services/org.freedesktop.login1.service
+
+    # Programs built for logind find elogind through these names, as on Void.
+    ln -s libelogind.pc "${dest_dir}${prefix}"/lib/pkgconfig/libsystemd.pc
+    ln -s libelogind.pc "${dest_dir}${prefix}"/lib/pkgconfig/libsystemd-logind.pc
+    ln -s elogind "${dest_dir}${prefix}"/include/systemd
+
+    # Void's wrapper: elogind's cgroup hierarchy and the tmpfs it keeps
+    # sessions and users in.
+    install -Dm755 /dev/stdin "${dest_dir}${prefix}"/libexec/elogind/elogind.wrapper <<'WRAP'
+#!/bin/sh
+# Void's core-services mount a tmpfs on /sys/fs/cgroup at boot; Tulpar has no
+# such step, so it is done here, before elogind's own hierarchy goes in it.
+mkdir -p /sys/fs/cgroup
+if ! mountpoint -q /sys/fs/cgroup; then
+    mount -t tmpfs -o nosuid,nodev,noexec,mode=0755 cgroup /sys/fs/cgroup || exit 1
+fi
+cgroup=/sys/fs/cgroup/elogind
+mkdir -p "$cgroup"
+if ! mountpoint -q "$cgroup"; then
+    mount -t cgroup -o none,name=elogind cgroup "$cgroup" || exit 1
+fi
+for tmpfs in /run/systemd /run/user; do
+    mountpoint -q "$tmpfs" && continue
+    mkdir -p "$tmpfs"
+    mount -t tmpfs -o nosuid,nodev,noexec,mode=0755 none "$tmpfs" || exit 1
+done
+exec /usr/libexec/elogind/elogind
+WRAP
+    install -Dm755 /dev/stdin "${dest_dir}"/etc/sv/elogind/run <<'RUN'
+#!/bin/sh
+exec 2>&1
+# elogind does not work right if it starts before the system bus.
+[ -S /run/dbus/system_bus_socket ] || { sleep 1; exit 1; }
+exec /usr/libexec/elogind/elogind.wrapper
+RUN
+    mkdir -p "${dest_dir}"/etc/runit/runsvdir/default
+    ln -s /etc/sv/elogind "${dest_dir}"/etc/runit/runsvdir/default/elogind
+
+    post_package_strip
+}

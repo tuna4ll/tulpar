@@ -1,7 +1,7 @@
 #! /bin/sh
 
 version=1.33.1
-revision=1
+revision=2
 tarball_url="https://github.com/canonical/lightdm/releases/download/${version}/lightdm-${version}.tar.xz"
 tarball_blake2b="0b6af0a17802a9964c3ded210e25f49fb35d603c1accdd8bd414aae3fd46772162ab8ce98a55646710238ad0e568e8be18124bc91dd7bbe8aab45b0eb8ce9c48"
 source_imagedeps="autoconf automake libtool intltool gtk-doc-tools gobject-introspection libgirepository1.0-dev valac yelp-tools"
@@ -13,7 +13,10 @@ prepare() {
     # As Arch sets it up: the run directory in /run, Tulpar's session wrapper,
     # and the user list starting at uid 1000.
     sed -i 's|^#run-directory=.*|run-directory=/run/lightdm|;
-            s|^#session-wrapper=lightdm-session|session-wrapper=/etc/lightdm/Xsession|' data/lightdm.conf
+            s|^#session-wrapper=lightdm-session|session-wrapper=/etc/lightdm/Xsession|;
+            s|^#logind-check-graphical=true|logind-check-graphical=false|' data/lightdm.conf
+    # Without udev, elogind never learns that seat0 has a display, and LightDM
+    # would wait for it forever.
     sed -i 's|^minimum-uid=500|minimum-uid=1000|;
             s|^hidden-shells=.*|hidden-shells=/bin/false /usr/bin/nologin /bin/nologin /sbin/nologin|' data/users.conf
     # The release has no configure: autogen.sh's steps, without its demand
@@ -83,7 +86,8 @@ done
 exec "$@"
 XSESSION
 
-    # Tulpar's accounts have no passwords, so pam_unix takes an empty one.
+    # Tulpar's accounts have no passwords, so pam_unix takes an empty one;
+    # pam_elogind registers the session and makes its XDG_RUNTIME_DIR.
     install -Dm644 /dev/stdin "${dest_dir}"/etc/pam.d/lightdm <<'PAM'
 #%PAM-1.0
 auth     required pam_nologin.so
@@ -93,6 +97,7 @@ password required pam_unix.so nullok yescrypt
 session  required pam_limits.so
 session  required pam_unix.so
 session  optional pam_env.so
+-session optional pam_elogind.so
 PAM
     install -Dm644 /dev/stdin "${dest_dir}"/etc/pam.d/lightdm-autologin <<'PAM'
 #%PAM-1.0
@@ -103,6 +108,7 @@ password required pam_deny.so
 session  required pam_limits.so
 session  required pam_unix.so
 session  optional pam_env.so
+-session optional pam_elogind.so
 PAM
     install -Dm644 /dev/stdin "${dest_dir}"/etc/pam.d/lightdm-greeter <<'PAM'
 #%PAM-1.0
@@ -111,12 +117,15 @@ account  required pam_permit.so
 password required pam_deny.so
 session  required pam_unix.so
 session  optional pam_env.so
+-session optional pam_elogind.so
 PAM
 
     # runit starts it once the system bus is up, as the greeter user it needs.
     install -Dm755 /dev/stdin "${dest_dir}"/etc/sv/lightdm/run <<'RUN'
 #!/bin/sh
 [ -S /run/dbus/system_bus_socket ] || { sleep 1; exit 1; }
+# Sessions are registered with elogind, when it is installed.
+[ ! -e /var/service/elogind ] || sv check /var/service/elogind >/dev/null || { sleep 1; exit 1; }
 install -d -o lightdm -g lightdm -m 0711 /run/lightdm
 install -d -o lightdm -g lightdm -m 0750 /var/lib/lightdm /var/cache/lightdm
 install -d -o lightdm -g lightdm -m 0755 /var/lib/lightdm-data

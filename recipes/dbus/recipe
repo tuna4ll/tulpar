@@ -1,7 +1,7 @@
 #! /bin/sh
 
 version=1.16.2
-revision=9
+revision=10
 tarball_url="https://dbus.freedesktop.org/releases/dbus/dbus-${version}.tar.xz"
 tarball_blake2b="ddca8abdd5df70b24d51293a262cda3f9e69681b31ae8bb560a6286ca6f2dc0c420dc5322a61bb142a77b2b5f86bdafcc6bf84b0d78af9610af7a78763b8b8fb"
 hostdeps="gcc pkg-config"
@@ -37,6 +37,7 @@ package() {
 
     touch "${dest_dir}${prefix}"/share/dbus-1/session.d/.keep
 
+
     # The system bus, which LightDM and most desktop programs look for.
     install -Dm755 /dev/stdin "${dest_dir}"/etc/sv/dbus/run <<'RUN'
 #!/bin/sh
@@ -50,6 +51,11 @@ RUN
 
     post_package_strip
 
+    # The system bus starts activatable services (polkitd among them) through
+    # this helper, which must be setuid root and run by messagebus only; the
+    # package cannot carry the group, so it is set here.
     install_hook_add 'mkdir -p /var/lib/dbus' \
-                     'dbus-uuidgen --ensure >/var/lib/dbus/machine-id'
+                     'dbus-uuidgen --ensure >/var/lib/dbus/machine-id' \
+                     'chgrp messagebus usr/libexec/dbus-daemon-launch-helper' \
+                     'chmod 4750 usr/libexec/dbus-daemon-launch-helper'
 }

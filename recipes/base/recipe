@@ -2,7 +2,7 @@
 
 skip_pkg_check=yes
 version=0.0
-revision=4
+revision=5
 
 # Kernel, C library, init and package manager.
 deps="core-libs base-files tunix runit xbps"
@@ -15,3 +15,6 @@ deps+=" util-linux shadow kmod file xz bzip2 zstd fastfetch dhcpcd ca-certificat
 
 # Everyday tools.
 deps+=" procps-ng iproute2 sudo curl wget openssh vim htop man-db man-pages"
+
+# The clock, kept right by NTP.
+deps+=" chrony"

@@ -1,0 +1,28 @@
+#! /bin/sh
+
+version=2.78
+revision=1
+tarball_url="https://mirrors.edge.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-${version}.tar.xz"
+tarball_blake2b="60b1afed4df471e9bbb631deca850920408710fb166335d5640feadf5e2feced0bccae10ba4010eca0dfb0cbb5cd41e255c2e4ac232dc3d18b7d269df9f1e72a"
+imagedeps="build-essential"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+# libcap's own make, as Arch builds it, without the Go bindings or pam_cap.
+_make() {
+    make CROSS_COMPILE=${OS_TRIPLET}- BUILD_CC=gcc \
+        prefix=${prefix} lib=lib sbindir=bin \
+        CFLAGS="$TARGET_CFLAGS -fPIC" LDFLAGS="$TARGET_LDFLAGS" \
+        GOLANG=no PAM_CAP=no DYNAMIC=yes RAISE_SETFCAP=no "$@"
+}
+
+build() {
+    cp -rp "${source_dir}"/. ./
+    _make -j${parallelism}
+}
+
+package() {
+    _make DESTDIR="${dest_dir}" install
+
+    post_package_strip
+}
