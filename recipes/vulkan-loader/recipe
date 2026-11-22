@@ -1,0 +1,28 @@
+#! /bin/sh
+
+version=1.4.363.0
+revision=1
+tarball_url="https://github.com/KhronosGroup/Vulkan-Loader/archive/refs/tags/vulkan-sdk-${version}.tar.gz"
+tarball_blake2b="1f8018340611c47fdcc21d6699d6b1cdadacaf5945ef35c8b73086215374d138cc82a17918968c1a017381ece689d5e036441e6e7c7b82ee625b4d2446af4e68"
+imagedeps="python3-lxml"
+hostdeps="gcc pkg-config"
+deps="core-libs vulkan-headers libx11 libxcb libxrandr wayland"
+
+configure() {
+    cmake_configure \
+        -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+        -DCMAKE_SKIP_INSTALL_RPATH=ON \
+        -DBUILD_TESTS=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    sed -Ei "s|/sysroot(/)?|/|g" "${dest_dir}${prefix}"/lib/cmake/VulkanLoader/*.cmake 2>/dev/null || true
+
+    post_package_strip
+}

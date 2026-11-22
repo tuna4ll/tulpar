@@ -1,0 +1,27 @@
+#! /bin/sh
+
+version=1.4.363.0
+revision=1
+tarball_url="https://github.com/KhronosGroup/Vulkan-Tools/archive/refs/tags/vulkan-sdk-${version}.tar.gz"
+tarball_blake2b="64d631e62416856b8c7e5e0cd20b60d38f030ad38a116cf7b5e731ac9973baeb626dff2063cd8243b2313fc5d64f0659db07a732eb9b9ec29a00ed47efd11155"
+imagedeps="glslang-tools libwayland-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs vulkan-headers vulkan-loader volk libx11 libxcb libxrandr wayland wayland-protocols"
+
+configure() {
+    cmake_configure \
+        -DBUILD_ICD=OFF \
+        -DCMAKE_SKIP_INSTALL_RPATH=ON \
+        -DGLSLANG_INSTALL_DIR=/usr \
+        -DWAYLAND_SCANNER_EXECUTABLE=/usr/bin/wayland-scanner
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

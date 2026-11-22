@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=1.4.363.0
+revision=1
+tarball_url="https://github.com/zeux/volk/archive/refs/tags/vulkan-sdk-${version}.tar.gz"
+tarball_blake2b="568ccc46e501208f192b6c335a1eaf8330f1c4cb79966c2b206e9d19f6bed52e977592b60929afcc53a9a8ea17c5f37b79efa523d3753dfed24c256b471bdea1"
+hostdeps="gcc pkg-config"
+deps="core-libs vulkan-headers"
+
+configure() {
+    cmake_configure \
+        -DVOLK_INSTALL=ON
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    sed -Ei "s|/sysroot(/)?|/|g" "${dest_dir}${prefix}"/lib/cmake/volk/*.cmake
+}

@@ -1,0 +1,57 @@
+#! /bin/sh
+
+version=11.22
+revision=1
+tarball_url="https://dl.winehq.org/wine/source/11.x/wine-${version}.tar.xz"
+tarball_blake2b="7aeab821123738f1eba9a4d74b85738007f301aec5d7734a5201e0d82484536393f60b638538391ce1bc1d22da48e41ec465acb529d380a9558991c62068607a"
+# The host tools (winebuild, widl, wrc, and sfnt2fon, which needs FreeType)
+# are built first; the mingw compiler makes Wine's own Windows DLLs.
+imagedeps="build-essential gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 flex bison libfreetype-dev pkgconf"
+hostdeps="gcc pkg-config"
+deps="core-libs freetype2 fontconfig libx11 libxext libxrandr libxi libxcursor libxinerama libxcomposite libxrender libxfixes libxkbcommon wayland gnutls alsa-lib libpulse mesa vulkan-loader vulkan-headers dbus libcups libudev-zero"
+
+configure() {
+    # Tunix runs no 32-bit code, so Wine is built for 64-bit Windows programs
+    # only: Arch also builds an i386 half (WoW64), which needs the CPU's
+    # 32-bit mode. There is no aarch64 build, which needs llvm-mingw.
+    [ "${JINX_ARCH}" = x86_64 ] || { echo "Wine is only built for x86_64" >&2; return 1; }
+
+    mkdir -p tools
+    # The host's own pkg-config, so the tools find the host's FreeType.
+    (cd tools && env -u PKG_CONFIG_SYSROOT_DIR -u PKG_CONFIG_LIBDIR -u PKG_CONFIG_PATH \
+        PKG_CONFIG=/usr/bin/pkg-config CC=gcc CFLAGS=-O2 "${source_dir}"/configure \
+        --enable-archs=x86_64 --disable-tests --without-x \
+        --without-gnutls --without-alsa --without-pulse --without-wayland \
+        --without-dbus --without-cups --without-fontconfig && \
+        make -j${parallelism} __tooldeps__ nls/locale.nls)
+
+    # As Arch: cross flags for the PE part.
+    CROSSCFLAGS="-O2 -pipe" CROSSCXXFLAGS="-O2 -pipe" CROSSLDFLAGS="-Wl,-O1" \
+    autotools_configure \
+        --libdir=${prefix}/lib \
+        --with-wine-tools="$(pwd)/tools" \
+        --enable-archs=x86_64 \
+        --disable-tests \
+        --enable-build-id \
+        --with-x \
+        --with-wayland \
+        --with-freetype \
+        --with-fontconfig \
+        --with-gnutls \
+        --with-alsa \
+        --with-pulse \
+        --with-dbus \
+        --with-cups \
+        --with-udev \
+        --with-vulkan
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    make DESTDIR="${dest_dir}" install
+
+    post_package_strip
+}

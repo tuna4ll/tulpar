@@ -1,0 +1,20 @@
+#! /bin/sh
+
+version=1.4.363.0
+revision=1
+tarball_url="https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/vulkan-sdk-${version}.tar.gz"
+tarball_blake2b="2635e80dd015f6f60eadc32a9a0457929642a58771ac4c3165143e369261e6d402f35d4d98c7b0454c67a6e9af940182fedb20e19ca090ad9a5b2eadeee04ecc"
+hostdeps="gcc pkg-config"
+deps="core-libs"
+
+configure() {
+    cmake_configure
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+}

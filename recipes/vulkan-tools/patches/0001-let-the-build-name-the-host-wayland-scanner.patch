@@ -1,0 +1,13 @@
+--- a/cube/CMakeLists.txt	2026-11-22 23:13:36.845581571 +0300
++++ b/cube/CMakeLists.txt	2026-11-22 23:13:36.855101928 +0300
+@@ -100,7 +100,9 @@
+         pkg_get_variable(WAYLAND_INCLUDE_DIRS wayland-client includedir)
+ 
+         pkg_check_modules(WAYLAND_SCANNER REQUIRED wayland-scanner)
+-        pkg_get_variable(WAYLAND_SCANNER_EXECUTABLE wayland-scanner wayland_scanner)
++        if(NOT WAYLAND_SCANNER_EXECUTABLE)
++            pkg_get_variable(WAYLAND_SCANNER_EXECUTABLE wayland-scanner wayland_scanner)
++        endif()
+         message(DEBUG "WAYLAND_SCANNER_EXECUTABLE = ${WAYLAND_SCANNER_EXECUTABLE}")
+ 
+         pkg_get_variable(WAYLAND_CLIENT_PATH wayland-client pkgdatadir)
