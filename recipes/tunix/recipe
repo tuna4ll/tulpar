@@ -2,9 +2,9 @@
 
 skip_pkg_check=yes
 version=0.1.0git
-revision=21
+revision=22
 git_url="https://github.com/tuna4ll/tunix.git"
-commit=8e30cb08d5025ca3e5db07c059cde7b8c0d0b9ad
+commit=974f862b92b4c7fd3f4fb78df0340481b3333a18
 source_imagedeps="curl git ca-certificates"
 imagedeps="build-essential gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu"
 deps="kmod mtools"
@@ -22,7 +22,7 @@ early_prepare() {
 build() {
     case "${JINX_ARCH}" in
         x86_64) _targets="kernel modules" ;;
-        aarch64) _targets="aarch64-core" ;;
+        aarch64) _targets="aarch64-core modules-aarch64" ;;
     esac
 
     make -C "${source_dir}" -j${parallelism} \
@@ -77,16 +77,17 @@ echo "tunix: installed the kernel on ${esp}"
 EOF
     install_hook_add "/usr/libexec/tunix/install-kernel"
 
+    _modules=modules
     if [ "${JINX_ARCH}" = aarch64 ]; then
         # An arm64 Image, which Limine boots with the Linux protocol.
         install -Dm644 kernel-aarch64-core.img "${dest_dir}${prefix}"/share/tunix/Image
-        return
+        _modules=aarch64-core/modules
+    else
+        install -Dm644 kernel.elf "${dest_dir}${prefix}"/share/tunix/kernel.elf
     fi
 
-    install -Dm644 kernel.elf "${dest_dir}${prefix}"/share/tunix/kernel.elf
-
     mkdir -p "${dest_dir}${prefix}"/lib/modules/${_release}/kernel
-    find modules -name '*.ko' -exec install -m644 -t "${dest_dir}${prefix}"/lib/modules/${_release}/kernel {} +
+    find ${_modules} -name '*.ko' -exec install -m644 -t "${dest_dir}${prefix}"/lib/modules/${_release}/kernel {} +
 
     install_hook_add "depmod ${_release}"
 }
