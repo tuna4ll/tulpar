@@ -22,6 +22,16 @@ Tulpar is built for x86_64 and aarch64 as a disk image, `tulpar.img`, with an
 EFI system partition holding Limine and the kernel and an ext4 root. Tunix
 mounts its root from disk and has no initramfs, so there is no live ISO.
 
+On x86_64 the `tunix` package also installs `/usr/share/tunix/vmlinuz`, the
+same kernel in the Linux boot format, for booting a Tulpar root with GRUB,
+systemd-boot or straight from UEFI firmware instead of Limine. The console needs
+a 32-bit framebuffer, so with GRUB:
+
+```
+set gfxpayload=1280x800x32
+linux /vmlinuz root=LABEL=tulpar-root init=/sbin/init
+```
+
 Prebuilt images for both architectures are attached to every
 [release](https://github.com/tuna4ll/tulpar/releases), compressed with zstd:
 
