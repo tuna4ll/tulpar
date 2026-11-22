@@ -1,0 +1,38 @@
+#! /bin/sh
+
+version=6.10.2
+revision=1
+tarball_url="https://download.qt.io/archive/qt/6.10/${version}/submodules/qtdeclarative-everywhere-src-${version}.tar.xz"
+tarball_blake2b="32f82c9a7856d1d67d03b292cccdee7d2c22c2667d0dcda47b491a1e5d8e15af33c8d88d5c5c8fbb6fbaffc408f73b6e6ec6cfbfd6794da0e404277ce87c0fbe"
+# Debian's Qt is 6.10.2 as well, so its QML tools generate code for this one,
+# and its qsb compiles Qt Quick's shaders.
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-declarative-dev qt6-declarative-dev-tools qt6-tools-dev qt6-tools-dev-tools qt6-svg-dev qt6-shadertools-dev qt6-shader-baker ninja-build"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base qt6-svg"
+
+configure() {
+    qt_cmake_configure \
+        -GNinja \
+        -DINSTALL_BINDIR=lib/qt6/bin \
+        -DINSTALL_PUBLICBINDIR=bin \
+        -DINSTALL_LIBEXECDIR=lib/qt6/libexec \
+        -DINSTALL_ARCHDATADIR=lib/qt6 \
+        -DINSTALL_DATADIR=share/qt6 \
+        -DINSTALL_INCLUDEDIR=include/qt6 \
+        -DINSTALL_MKSPECSDIR=lib/qt6/mkspecs \
+        -DINSTALL_PLUGINSDIR=lib/qt6/plugins \
+        -DINSTALL_QMLDIR=lib/qt6/qml \
+        -DINSTALL_TRANSLATIONSDIR=share/qt6/translations \
+        -DQt6QmlTools_DIR=/usr/lib/$(uname -m)-linux-gnu/cmake/Qt6QmlTools \
+        -DQt6ShaderToolsTools_DIR=/usr/lib/$(uname -m)-linux-gnu/cmake/Qt6ShaderToolsTools
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

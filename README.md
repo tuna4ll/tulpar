@@ -69,10 +69,12 @@ qemu-system-aarch64 -M virt -cpu cortex-a72 -m 4G -smp 2 \
 The aarch64 UEFI firmware comes from the EDK2 project; its path differs between
 distributions and can be given as `AARCH64_FIRMWARE=`.
 
-Log in as `tulpar` or `root`, both without passwords, and run `startx` for
-the Mosaic desktop. dhcpcd brings up the network on boot, and packages can be
-installed or updated with `xbps-install` from
-[tulpar-packs](https://github.com/tuna4ll/tulpar-packs).
+After boot, LightDM greets on tty7: pick `tulpar` and press Enter, as the
+accounts `tulpar` and `root` have no passwords, and the Mosaic desktop starts.
+The text consoles stay on tty1 to tty3, where `startx` starts Mosaic as well,
+and SDDM can be installed instead of LightDM as `sddm`. dhcpcd brings up the
+network on boot, and packages can be installed or updated with `xbps-install`
+from [tulpar-packs](https://github.com/tuna4ll/tulpar-packs).
 
 > [!NOTE]
 > Depending on your distribution, to use Linux's KVM, you might need to add your

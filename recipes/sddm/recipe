@@ -1,0 +1,87 @@
+#! /bin/sh
+
+version=0.21.0
+revision=1
+tarball_url="https://github.com/sddm/sddm/archive/refs/tags/v${version}.tar.gz"
+tarball_blake2b="849cb8b06b9510e5366ea28ef322c242db7d5a77d94c0a5a727f468209880a717055ad8b0c2f5a857852202a4d6bc1f68281fe0e0ab3c6a32327b5a4219af3a0"
+imagedeps="qt6-base-dev qt6-base-dev-tools qt6-declarative-dev qt6-declarative-dev-tools qt6-tools-dev qt6-tools-dev-tools extra-cmake-modules ninja-build"
+hostdeps="gcc pkg-config"
+deps="core-libs qt6-base qt6-declarative linux-pam libxau libxcb libxkbcommon xorg-server xorg-xauth dbus ttf-dejavu"
+
+configure() {
+    # Without systemd or elogind, as Void builds it; SDDM then runs seat0 itself.
+    qt_cmake_configure \
+        -GNinja \
+        -DCMAKE_INSTALL_LIBEXECDIR=lib/sddm \
+        -DBUILD_WITH_QT6=ON \
+        -DNO_SYSTEMD=ON \
+        -DUSE_ELOGIND=OFF \
+        -DENABLE_JOURNALD=OFF \
+        -DBUILD_MAN_PAGES=OFF \
+        -DINSTALL_PAM_CONFIGURATION=OFF \
+        -DDBUS_CONFIG_DIR=/usr/share/dbus-1/system.d \
+        -DDBUS_CONFIG_FILENAME=sddm_org.freedesktop.DisplayManager.conf \
+        -DRUNTIME_DIR=/run/sddm \
+        -DUID_MAX=60513 \
+        -DQt6QmlTools_DIR=/usr/lib/$(uname -m)-linux-gnu/cmake/Qt6QmlTools
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+    # Debian's qtpaths named its multiarch QML directory; Tulpar's Qt looks here.
+    for d in "${dest_dir}${prefix}"/lib/*-linux-gnu/qt6/qml; do
+        [ -d "$d" ] || continue
+        mkdir -p "${dest_dir}${prefix}"/lib/qt6/qml
+        cp -a "$d"/. "${dest_dir}${prefix}"/lib/qt6/qml/
+        rm -rf "${d%/qt6/qml}"
+    done
+
+    # Tulpar's accounts have no passwords, so pam_unix takes an empty one.
+    install -Dm644 /dev/stdin "${dest_dir}"/etc/pam.d/sddm <<'PAM'
+#%PAM-1.0
+auth     required pam_nologin.so
+auth     required pam_unix.so nullok
+account  required pam_unix.so
+password required pam_unix.so nullok yescrypt
+session  required pam_limits.so
+session  required pam_unix.so
+session  optional pam_env.so
+PAM
+    install -Dm644 /dev/stdin "${dest_dir}"/etc/pam.d/sddm-autologin <<'PAM'
+#%PAM-1.0
+auth     required pam_nologin.so
+auth     required pam_permit.so
+account  required pam_unix.so
+password required pam_deny.so
+session  required pam_limits.so
+session  required pam_unix.so
+session  optional pam_env.so
+PAM
+    install -Dm644 /dev/stdin "${dest_dir}"/etc/pam.d/sddm-greeter <<'PAM'
+#%PAM-1.0
+auth     required pam_permit.so
+account  required pam_permit.so
+password required pam_deny.so
+session  required pam_unix.so
+session  optional pam_env.so
+PAM
+
+    # Not linked into the default runlevel: LightDM is Tulpar's display
+    # manager, and both want X on tty7. Switch with
+    #   rm /var/service/lightdm; ln -s /etc/sv/sddm /var/service/
+    install -Dm755 /dev/stdin "${dest_dir}"/etc/sv/sddm/run <<'RUN'
+#!/bin/sh
+[ -S /run/dbus/system_bus_socket ] || { sleep 1; exit 1; }
+install -d -o sddm -g sddm -m 0750 /var/lib/sddm
+exec sddm
+RUN
+
+    post_package_strip
+
+    install_hook_add 'getent group sddm >/dev/null || groupadd -r sddm' \
+                     'getent passwd sddm >/dev/null || useradd -r -g sddm -G video -d /var/lib/sddm -s /bin/false -c "Simple Desktop Display Manager" sddm'
+}

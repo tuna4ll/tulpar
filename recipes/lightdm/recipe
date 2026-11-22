@@ -1,0 +1,133 @@
+#! /bin/sh
+
+version=1.33.1
+revision=1
+tarball_url="https://github.com/canonical/lightdm/releases/download/${version}/lightdm-${version}.tar.xz"
+tarball_blake2b="0b6af0a17802a9964c3ded210e25f49fb35d603c1accdd8bd414aae3fd46772162ab8ce98a55646710238ad0e568e8be18124bc91dd7bbe8aab45b0eb8ce9c48"
+source_imagedeps="autoconf automake libtool intltool gtk-doc-tools gobject-introspection libgirepository1.0-dev valac yelp-tools"
+imagedeps="intltool libglib2.0-dev-bin"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 libgcrypt linux-pam libx11 libxcb libxdmcp libxklavier dbus xorg-server"
+
+prepare() {
+    # As Arch sets it up: the run directory in /run, Tulpar's session wrapper,
+    # and the user list starting at uid 1000.
+    sed -i 's|^#run-directory=.*|run-directory=/run/lightdm|;
+            s|^#session-wrapper=lightdm-session|session-wrapper=/etc/lightdm/Xsession|' data/lightdm.conf
+    sed -i 's|^minimum-uid=500|minimum-uid=1000|;
+            s|^hidden-shells=.*|hidden-shells=/bin/false /usr/bin/nologin /bin/nologin /sbin/nologin|' data/users.conf
+    # The release has no configure: autogen.sh's steps, without its demand
+    # for yelp-build, which only the help needs.
+    libtoolize --force --copy
+    intltoolize --force --copy
+    gtkdocize --copy
+    aclocal
+    autoconf
+    autoheader
+    automake --add-missing --copy --foreign
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure \
+        --libexecdir=${prefix}/lib/lightdm \
+        --localstatedir=/var \
+        --disable-tests \
+        --disable-gtk-doc \
+        --enable-introspection=no \
+        --enable-vala=no \
+        --disable-liblightdm-qt5 \
+        --disable-liblightdm-qt6 \
+        --disable-libaudit \
+        --with-greeter-user=lightdm \
+        --with-greeter-session=lightdm-gtk-greeter
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+    # Upstart and AppArmor files Tulpar has no use for, as Arch drops them.
+    rm -rf "${dest_dir}"/etc/init "${dest_dir}"/etc/apparmor.d
+
+    # Arch's wrapper: a login shell's environment, then the session.
+    install -Dm755 /dev/stdin "${dest_dir}"/etc/lightdm/Xsession <<'XSESSION'
+#!/bin/sh
+# LightDM runs X sessions through this, as a login shell would start them.
+case $SHELL in
+  */bash)
+    [ -z "$BASH" ] && exec $SHELL --login $0 "$@"
+    shopt -q login_shell || exec $SHELL --login $0 "$@"
+    set +o posix
+    ;;
+  */fish)
+    [ -f /etc/profile ] && . /etc/profile
+    [ -f "$HOME/.profile" ] && . "$HOME/.profile"
+    xsess_tmp=$(mktemp /tmp/xsess-env-XXXXXX)
+    $SHELL --login -c "/bin/sh -c 'export -p' > $xsess_tmp"
+    . $xsess_tmp
+    rm -f $xsess_tmp
+    ;;
+  *)
+    [ -f /etc/profile ] && . /etc/profile
+    [ -f "$HOME/.profile" ] && . "$HOME/.profile"
+    ;;
+esac
+[ -f /etc/xprofile ] && . /etc/xprofile
+[ -f "$HOME/.xprofile" ] && . "$HOME/.xprofile"
+for file in /etc/X11/Xresources "$HOME/.Xresources"; do
+    [ -f "$file" ] && xrdb -merge "$file"
+done
+exec "$@"
+XSESSION
+
+    # Tulpar's accounts have no passwords, so pam_unix takes an empty one.
+    install -Dm644 /dev/stdin "${dest_dir}"/etc/pam.d/lightdm <<'PAM'
+#%PAM-1.0
+auth     required pam_nologin.so
+auth     required pam_unix.so nullok
+account  required pam_unix.so
+password required pam_unix.so nullok yescrypt
+session  required pam_limits.so
+session  required pam_unix.so
+session  optional pam_env.so
+PAM
+    install -Dm644 /dev/stdin "${dest_dir}"/etc/pam.d/lightdm-autologin <<'PAM'
+#%PAM-1.0
+auth     required pam_nologin.so
+auth     required pam_permit.so
+account  required pam_unix.so
+password required pam_deny.so
+session  required pam_limits.so
+session  required pam_unix.so
+session  optional pam_env.so
+PAM
+    install -Dm644 /dev/stdin "${dest_dir}"/etc/pam.d/lightdm-greeter <<'PAM'
+#%PAM-1.0
+auth     required pam_permit.so
+account  required pam_permit.so
+password required pam_deny.so
+session  required pam_unix.so
+session  optional pam_env.so
+PAM
+
+    # runit starts it once the system bus is up, as the greeter user it needs.
+    install -Dm755 /dev/stdin "${dest_dir}"/etc/sv/lightdm/run <<'RUN'
+#!/bin/sh
+[ -S /run/dbus/system_bus_socket ] || { sleep 1; exit 1; }
+install -d -o lightdm -g lightdm -m 0711 /run/lightdm
+install -d -o lightdm -g lightdm -m 0750 /var/lib/lightdm /var/cache/lightdm
+install -d -o lightdm -g lightdm -m 0755 /var/lib/lightdm-data
+install -d -m 0711 /var/log/lightdm
+exec lightdm
+RUN
+    mkdir -p "${dest_dir}"/etc/runit/runsvdir/default
+    ln -s /etc/sv/lightdm "${dest_dir}"/etc/runit/runsvdir/default/lightdm
+
+    post_package_strip
+
+    install_hook_add 'getent group lightdm >/dev/null || groupadd -r lightdm' \
+                     'getent passwd lightdm >/dev/null || useradd -r -g lightdm -d /var/lib/lightdm -s /bin/false -c "Light Display Manager" lightdm'
+}

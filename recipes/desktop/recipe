@@ -2,11 +2,14 @@
 
 skip_pkg_check=yes
 version=0.0
-revision=5
+revision=6
 
 # Tunix has DRM/KMS (/dev/dri/card0) and evdev (/dev/input/event*), and no udev, so the
 # X server is set up statically by /etc/X11/xorg.conf.d/10-tulpar.conf.
 deps="base mosaic xorg-server xorg-xinit xf86-input-evdev st ttf-dejavu"
+
+# LightDM greets at boot and starts the Mosaic session.
+deps+=" lightdm lightdm-gtk-greeter"
 
 # Small X and OpenGL demos.
 deps+=" xorg-xeyes xorg-xclock mesa-demos"

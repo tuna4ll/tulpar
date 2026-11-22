@@ -1,0 +1,37 @@
+#! /bin/sh
+
+version=2.0.9
+revision=1
+tarball_url="https://github.com/Xubuntu/lightdm-gtk-greeter/releases/download/lightdm-gtk-greeter-${version}/lightdm-gtk-greeter-${version}.tar.gz"
+tarball_blake2b="33c7df912ee9faa46c97e7a458f400b13d7d746521de58b1c63ec845574c45374a27fe21718ac78a33a729617941cff01802c4736d1d3066d001065a57acc264"
+# xdt-csource turns the greeter's UI and CSS into C headers.
+imagedeps="libglib2.0-dev-bin xfce4-dev-tools"
+hostdeps="gcc pkg-config"
+deps="core-libs gtk3 lightdm libxklavier adwaita-icon-theme-legacy"
+
+configure() {
+    # As Arch builds it: libxklavier for layouts, no indicators or AT-SPI launcher.
+    autotools_configure \
+        --libexecdir=${prefix}/lib/lightdm \
+        --with-libxklavier \
+        --enable-kill-on-sigterm \
+        --enable-introspection=no \
+        --disable-at-spi-command \
+        --disable-indicator-services-command \
+        --disable-libido \
+        --disable-libindicator
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+    # Tulpar's icons are AdwaitaLegacy; GTK falls back from the symbolic names.
+    sed -i 's|^#icon-theme-name=$|icon-theme-name=AdwaitaLegacy|' \
+        "${dest_dir}"/etc/lightdm/lightdm-gtk-greeter.conf
+    grep -q '^icon-theme-name=AdwaitaLegacy$' "${dest_dir}"/etc/lightdm/lightdm-gtk-greeter.conf
+
+    post_package_strip
+}

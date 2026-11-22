@@ -1,0 +1,28 @@
+#! /bin/sh
+
+version=1.12.4
+revision=1
+tarball_url="https://gnupg.org/ftp/gcrypt/libgcrypt/libgcrypt-${version}.tar.bz2"
+tarball_blake2b="c30aed945b7050c38094258f5d4cad480e9b1fdf018378f07058542e129275d7be41cc7b512cda474d96c12c9920e0256e89242b2c2ee5dd4243e1f4bd178cb9"
+imagedeps="build-essential"
+hostdeps="gcc pkg-config"
+deps="core-libs libgpg-error"
+
+configure() {
+    # libgpg-error installs only gpgrt-config, which reads the sysroot's
+    # gpg-error.pc; it adds no -I flags, so nothing of the host leaks in.
+    GPGRT_CONFIG="${sysroot}${prefix}/bin/gpgrt-config" \
+    autotools_configure \
+        --disable-doc \
+        --disable-padlock-support
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}
