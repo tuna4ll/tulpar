@@ -84,7 +84,7 @@ timeout: 3
 /Tulpar - emergency shell
     protocol: ${protocol}
     path: boot():/boot/${kernel}
-    cmdline: root=LABEL=tulpar-root init=/bin/bash
+    cmdline: root=LABEL=tulpar-root init=/usr/libexec/tulpar-rescue
 CONF
 
 # Disk layout: GPT with a 1 MiB BIOS boot partition for Limine's BIOS stage

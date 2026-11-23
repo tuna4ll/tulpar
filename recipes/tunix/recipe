@@ -2,9 +2,9 @@
 
 skip_pkg_check=yes
 version=0.1.0git
-revision=23
+revision=24
 git_url="https://github.com/tuna4ll/tunix.git"
-commit=d637b646239b932b4790f40c00bf310ece6509d6
+commit=5e14e292f710d42edd409c93ead0273f65450a2f
 source_imagedeps="curl git ca-certificates"
 imagedeps="build-essential gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu"
 deps="kmod mtools"
@@ -72,6 +72,16 @@ if ! mcopy -i "${esp}" "${kernel}" "::/boot/${name}.new"; then
 fi
 mdel -i "${esp}" "::/boot/${name}" 2>/dev/null
 mren -i "${esp}" "::/boot/${name}.new" "::/boot/${name}" || exit 1
+# USB keyboards are a module now, which nothing loads with init=/bin/bash: the
+# emergency entry starts from tulpar-rescue, which loads them first.
+conf=$(mktemp)
+if mtype -i "${esp}" ::/boot/limine/limine.conf > "${conf}" 2>/dev/null &&
+    grep -q "init=/bin/bash" "${conf}"; then
+    sed -i 's|init=/bin/bash|init=/usr/libexec/tulpar-rescue|' "${conf}"
+    mcopy -o -i "${esp}" "${conf}" ::/boot/limine/limine.conf ||
+        echo "tunix: could not update the emergency entry in ${esp}" >&2
+fi
+rm -f "${conf}"
 sync
 echo "tunix: installed the kernel on ${esp}"
 EOF

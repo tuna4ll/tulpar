@@ -1,0 +1,23 @@
+#! /bin/sh
+
+version=1.0
+revision=1
+hostdeps="gcc"
+deps="core-libs kmod runit"
+
+build() {
+    ${OS_TRIPLET}-gcc ${TARGET_CFLAGS} -Wall -Wextra -o tulpar-hotplug \
+        "${base_dir}"/recipes/tulpar-hotplug/hotplug.c ${TARGET_LDFLAGS}
+}
+
+package() {
+    install -Dm755 tulpar-hotplug "${dest_dir}${prefix}"/bin/tulpar-hotplug
+    install -Dm755 /dev/stdin "${dest_dir}"/etc/sv/hotplug/run <<'EOF'
+#!/bin/sh
+exec tulpar-hotplug
+EOF
+    mkdir -p "${dest_dir}"/etc/runit/runsvdir/default
+    ln -s /etc/sv/hotplug "${dest_dir}"/etc/runit/runsvdir/default/hotplug
+
+    post_package_strip
+}

@@ -1,0 +1,6 @@
+#!/bin/sh
+# init for the boot menu's emergency shell: load the drivers for the devices present,
+# as runit's stage 1 does -- USB keyboards are a module -- and give a root shell.
+PATH=/usr/bin
+cat /sys/bus/*/devices/*/modalias 2>/dev/null | sort -u | xargs -r modprobe -q -a -b 2>/dev/null
+exec /bin/bash

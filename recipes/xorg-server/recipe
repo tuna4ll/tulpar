@@ -1,12 +1,12 @@
 #! /bin/sh
 
 version=21.1.25
-revision=3
+revision=4
 tarball_url="https://www.x.org/archive/individual/xserver/xorg-server-${version}.tar.xz"
 tarball_blake2b="5f557d291eb020d913671f6713835e29e0cb66377c77fb1197605fba655d7d6077ecd498635d4c93c6481559243d4e6a9573af341ba27b04b483dc2807d03607"
 hostdeps="gcc pkg-config"
 conf_files="/etc/X11/Xwrapper.config"
-deps="core-libs libdrm libpciaccess mesa libx11 libxext libxfixes libxxf86vm xorg-proto libxfont2 libxcvt libxau libxdmcp nettle pixman xorg-xkbcomp xkeyboard-config"
+deps="core-libs libdrm libpciaccess mesa libepoxy libx11 libxext libxfixes libxxf86vm xorg-proto libxfont2 libxcvt libxau libxdmcp nettle pixman xorg-xkbcomp xkeyboard-config"
 builddeps="xorg-util-macros xtrans xcb-proto libxcb xcb-util libxkbfile libxshmfence"
 
 prepare() {
@@ -37,12 +37,12 @@ configure() {
         -Dudev=false \
         -Dudev_kms=false \
         -Ddri1=false \
-        -Ddri2=false \
-        -Ddri3=false \
+        -Ddri2=true \
+        -Ddri3=true \
         -Dint10=false \
         -Dvgahw=false \
         -Ddrm=true \
-        -Dglamor=false \
+        -Dglamor=true \
         -Dglx=true
 }
 
