@@ -1,0 +1,22 @@
+#! /bin/sh
+
+version=4.9.1
+revision=1
+tarball_url="https://gitlab.freedesktop.org/slirp/libslirp/-/archive/v${version}/libslirp-v${version}.tar.gz"
+tarball_blake2b="e13338a4b96402eb8bb416ffba6f3b614ab985c74b80763e247b3e6e4b4c6df299c21b4e216968e81604ec6a4c04e9711c5e6abbd6999c6b1148424a32434a2b"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2"
+
+configure() {
+    meson_configure
+}
+
+build() {
+    meson compile --verbose -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" meson install --no-rebuild
+
+    post_package_strip
+}

@@ -1,0 +1,54 @@
+#! /bin/sh
+
+version=11.0.2
+revision=1
+tarball_url="https://download.qemu.org/qemu-${version}.tar.xz"
+tarball_blake2b="3e42b4fe086edef16e32758d5d46fdf3a48629abb782dbe2b739845315d3b29397152e376d52d418e68c7ccf63c868dacf3d2ab2ce67db96cc743ed9bdc6473b"
+imagedeps="build-essential python3-venv python3-pip python3-setuptools python3-wheel ninja-build bison flex"
+hostdeps="gcc pkg-config"
+deps="core-libs glib2 pixman dtc libslirp zlib zstd bzip2 libcap gtk3 libepoxy ncurses libpng libjpeg-turbo gnutls alsa-lib libpulse"
+
+build() {
+    # x86 guests only, accelerated by Tunix's KVM (AMD SVM) or emulated by TCG; QEMU's
+    # own configure, which sets up meson from the wheels in its tarball.
+    "${source_dir}"/configure \
+        --cross-prefix=${OS_TRIPLET}- \
+        --prefix=${prefix} \
+        --sysconfdir=/etc \
+        --localstatedir=/var \
+        --libexecdir=${prefix}/lib/qemu \
+        --target-list=x86_64-softmmu,i386-softmmu \
+        --extra-cflags="$TARGET_CFLAGS" \
+        --extra-ldflags="$TARGET_LDFLAGS" \
+        --enable-kvm \
+        --enable-fdt=system \
+        --enable-slirp \
+        --enable-tcg \
+        --enable-gtk \
+        --enable-opengl \
+        --enable-curses \
+        --enable-vnc \
+        --enable-alsa \
+        --enable-pa \
+        --disable-werror \
+        --disable-docs \
+        --disable-user \
+        --disable-xen \
+        --disable-sdl \
+        --disable-spice \
+        --disable-virglrenderer \
+        --disable-libusb \
+        --disable-usb-redir \
+        --disable-smartcard \
+        --disable-seccomp \
+        --disable-selinux \
+        --disable-guest-agent \
+        --disable-tools
+    make -j${parallelism}
+}
+
+package() {
+    make DESTDIR="${dest_dir}" install
+
+    post_package_strip
+}
