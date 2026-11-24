@@ -1,8 +1,8 @@
 NAME="Tulpar"
-PRETTY_NAME="Tulpar GNU/Tunix 0.2.0"
+PRETTY_NAME="Tulpar GNU/Tunix 0.2.1"
 ID=tulpar
-VERSION="0.2.0"
-VERSION_ID=0.2.0
+VERSION="0.2.1"
+VERSION_ID=0.2.1
 ANSI_COLOR="1;36"
 HOME_URL="https://github.com/tuna4ll/tulpar"
 BUG_REPORT_URL="https://github.com/tuna4ll/tulpar/issues"
