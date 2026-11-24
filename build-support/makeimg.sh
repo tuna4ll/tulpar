@@ -1,8 +1,13 @@
 #!/bin/sh
 
 # Builds a bootable GPT disk image: an EFI system partition with Limine and
-# the Tunix kernel, and an ext4 root. Tunix mounts its root from disk and has
-# no initramfs, so unlike Gloire there is no live ISO.
+# the Tunix kernel, and an ext4 root.
+#
+# With IMAGE_NAME=*.iso it builds a live ISO instead, for a CD, a DVD or (it
+# is a hybrid image) a USB stick: Limine and the kernel in ISO 9660, booted
+# by BIOS and UEFI through El Torito or from the stick's partition table, and
+# the ext4 root as a partition appended to it. Tunix mounts that root "live":
+# it never writes the disc, and what is changed stays in memory.
 
 set -e
 
@@ -33,6 +38,15 @@ esac
 
 IMAGE_SIZE="${IMAGE_SIZE:-4G}"
 IMAGE_NAME="${IMAGE_NAME:-tulpar.img}"
+case "${IMAGE_NAME}" in
+    *.iso)
+        live=yes
+        # The ISO is a release download, which GitHub keeps under 2 GiB a file;
+        # devel can be installed on the running system with xbps-install.
+        PKGS_TO_INSTALL="${PKGS_TO_INSTALL-desktop}"
+        ;;
+    *) live=no ;;
+esac
 PKGS_TO_INSTALL="${PKGS_TO_INSTALL-desktop devel}"
 
 set -f
@@ -73,19 +87,55 @@ case "${ARCH}" in
         ;;
 esac
 
+if [ "${live}" = yes ]; then
+    root="root=LABEL=tulpar-live live"
+else
+    root="root=LABEL=tulpar-root"
+fi
+
 cat <<CONF >esp_root/boot/limine/limine.conf
 timeout: 3
 
 /Tulpar
     protocol: ${protocol}
     path: boot():/boot/${kernel}
-    cmdline: root=LABEL=tulpar-root init=/sbin/init
+    cmdline: ${root} init=/sbin/init
 
 /Tulpar - emergency shell
     protocol: ${protocol}
     path: boot():/boot/${kernel}
-    cmdline: root=LABEL=tulpar-root init=/usr/libexec/tulpar-rescue
+    cmdline: ${root} init=/usr/libexec/tulpar-rescue
 CONF
+
+if [ "${live}" = yes ]; then
+    # El Torito boots BIOS from Limine's CD stage, and UEFI from its FAT image.
+    [ "${ARCH}" = x86_64 ] && cp "${limine_dir}"/limine-bios-cd.bin esp_root/boot/limine/
+    [ "${ARCH}" = x86_64 ] && bios_boot="-b boot/limine/limine-bios-cd.bin -no-emul-boot
+        -boot-load-size 4 -boot-info-table"
+
+    # The root, sized to what it holds; it is only read, so it has no journal
+    # and no blocks kept for root.
+    rm -f rootfs.ext4 "${IMAGE_NAME}"
+    trap 'rm -f rootfs.ext4 "${IMAGE_NAME}"' EXIT HUP INT TERM
+    used_kib=$(as_root du -sk sysroot | cut -f1)
+    files=$(as_root find sysroot | wc -l)
+    as_root mkfs.ext4 -q -L tulpar-live -O ^has_journal -m 0 -N $((files + files / 4 + 4096)) \
+        -d sysroot rootfs.ext4 "$((used_kib + used_kib / 10 + 65536))k"
+
+    # An MBR, which Limine's BIOS stages need, with three partitions: the ISO
+    # 9660 file system itself, the FAT image as the ESP (also UEFI's El Torito
+    # image), and the root.
+    xorriso -as mkisofs -R -J -V TULPAR -partition_offset 16 ${bios_boot:-} \
+        -append_partition 2 0xef "${limine_dir}"/limine-uefi-cd.bin \
+        -append_partition 3 0x83 rootfs.ext4 \
+        -eltorito-alt-boot -e --interval:appended_partition_2:all:: -no-emul-boot \
+        -o "${IMAGE_NAME}" esp_root
+    [ "${ARCH}" = x86_64 ] && limine-tmp/usr/local/bin/limine bios-install "${IMAGE_NAME}"
+
+    trap - EXIT HUP INT TERM
+    rm -rf rootfs.ext4 limine-tmp esp_root
+    exit 0
+fi
 
 # Disk layout: GPT with a 1 MiB BIOS boot partition for Limine's BIOS stage
 # (unused on aarch64, kept so the root is partition 3 everywhere), a 64 MiB ESP

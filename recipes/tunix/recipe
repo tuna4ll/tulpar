@@ -2,9 +2,9 @@
 
 skip_pkg_check=yes
 version=0.1.0git
-revision=25
+revision=26
 git_url="https://github.com/tuna4ll/tunix.git"
-commit=98c77dd1e1652e878ca50fcc35f452173e6f4e15
+commit=0a5ef2b3398a39cf6229629e158aeb0a0444dc5d
 source_imagedeps="curl git ca-certificates"
 imagedeps="build-essential gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu"
 deps="kmod mtools"
@@ -48,6 +48,8 @@ if [ -f /usr/share/tunix/Image ]; then
     kernel=/usr/share/tunix/Image
     name=Image
 fi
+# A live system's root is a disc that is never written.
+grep -qw live /proc/cmdline && exit 0
 root=$(awk '$2 == "/" { print $1; exit }' /proc/mounts)
 case "${root}" in
     /dev/*[0-9]p3) esp="${root%3}2" ;;

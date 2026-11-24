@@ -14,7 +14,7 @@ QEMUFLAGS_aarch64 ?= -M virt -cpu cortex-a72 -m 4G -smp 2 -bios $(AARCH64_FIRMWA
 	-netdev user,id=net0 -device virtio-net-pci,netdev=net0,disable-legacy=on
 QEMUFLAGS ?= $(QEMUFLAGS_$(ARCH))
 
-.PHONY: all image run clean
+.PHONY: all image iso run clean
 
 all: image
 
@@ -23,9 +23,13 @@ image:
 	mkdir -p $(BUILD)
 	cd $(BUILD) && ../build-support/makeimg.sh
 
+iso:
+	mkdir -p $(BUILD)
+	cd $(BUILD) && IMAGE_NAME=tulpar.iso ../build-support/makeimg.sh
+
 run:
 	@test -f $(IMAGE) || $(MAKE) image
 	qemu-system-$(ARCH) $(QEMUFLAGS) -serial stdio
 
 clean:
-	rm -f $(IMAGE)
+	rm -f $(IMAGE) $(BUILD)/tulpar.iso

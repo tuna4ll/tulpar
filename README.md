@@ -18,9 +18,14 @@ winged horse of Turkic mythology.
 
 ## Running
 
-Tulpar is built for x86_64 and aarch64 as a disk image, `tulpar.img`, with an
-EFI system partition holding Limine and the kernel and an ext4 root. Tunix
-mounts its root from disk and has no initramfs, so there is no live ISO.
+Tulpar is built for x86_64 and aarch64 as a live ISO, `tulpar.iso`, and as a
+disk image, `tulpar.img`, with an EFI system partition holding Limine and the
+kernel and an ext4 root.
+
+The ISO runs from a CD, a DVD or a USB stick, by BIOS or UEFI, with the
+Mosaic desktop. It never writes to what it boots from: changes are kept in
+memory and are gone after a reboot. The disk image is an installed system,
+which keeps its changes and also has the native toolchain.
 
 On x86_64 the `tunix` package also installs `/usr/share/tunix/vmlinuz`, the
 same kernel in the Linux boot format, for booting a Tulpar root with GRUB,
@@ -32,11 +37,43 @@ set gfxpayload=1280x800x32
 linux /vmlinuz root=LABEL=tulpar-root init=/sbin/init
 ```
 
-Prebuilt images for both architectures are attached to every
-[release](https://github.com/tuna4ll/tulpar/releases), compressed with zstd:
+Prebuilt ISOs and disk images for both architectures are attached to every
+[release](https://github.com/tuna4ll/tulpar/releases), the disk images
+compressed with zstd:
 
 ```bash
 zstd -d tulpar-0.1.0-x86_64.img.zst -o build-x86_64/tulpar.img
+```
+
+### The live ISO
+
+In QEMU, as a CD:
+
+```bash
+qemu-system-x86_64 -enable-kvm -cpu host -m 4G -M q35 -smp 2 \
+  -cdrom tulpar.iso \
+  -device qemu-xhci -device usb-kbd -device usb-tablet \
+  -netdev user,id=net0 -device virtio-net-pci,netdev=net0,disable-legacy=on \
+  -serial stdio
+```
+
+On aarch64, which has no CD drive on QEMU's `virt` machine, as a USB stick:
+
+```bash
+qemu-system-aarch64 -M virt -cpu cortex-a72 -m 4G -smp 2 \
+  -bios /usr/share/edk2/aarch64/QEMU_EFI.fd -device ramfb \
+  -device qemu-xhci -device usb-kbd -device usb-tablet \
+  -drive file=tulpar.iso,format=raw,if=none,id=stick,readonly=on \
+  -device usb-storage,drive=stick \
+  -netdev user,id=net0 -device virtio-net-pci,netdev=net0,disable-legacy=on \
+  -serial stdio
+```
+
+On a real machine, write it to a USB stick, which erases the stick, and boot
+from it:
+
+```bash
+sudo dd if=tulpar.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
 ### On virtual machines
@@ -105,7 +142,7 @@ and boot from it.
 A list of the tools needed for compilation of the OS are:
 
 - `awk`, `bash`, `curl`, `git`, `grep`, `gzip`, `sed`, `tar`, `wget` and `zstd`, `find` and `xargs` (from `findutils`), `chroot` and `sha256sum` (from `coreutils`), `free` (from `procps`), `flock`, `mount` and `unshare` (from `util-linux`), and `perl` and `xzcat` (from `xz`) for Jinx.
-- `fallocate`, `sfdisk` and `partx` (from `util-linux`), `mkfs.ext4` (from `e2fsprogs`), and `mformat` and `mcopy` (from `mtools`) for building the image.
+- `fallocate`, `sfdisk` and `partx` (from `util-linux`), `mkfs.ext4` (from `e2fsprogs`), and `mformat` and `mcopy` (from `mtools`) for building the image, and `xorriso` for the ISO.
 - `qemu` for testing, if wanted.
 
 The project uses [Jinx](https://github.com/Mintsuki/jinx) as its build system.
@@ -115,6 +152,8 @@ to on first use, and runs it. The instructions to build a system are:
 ```bash
 make image                # x86_64
 make image ARCH=aarch64   # aarch64
+make iso                  # the live ISO, build-x86_64/tulpar.iso
+make iso ARCH=aarch64
 ```
 
 or, by hand:
@@ -122,7 +161,11 @@ or, by hand:
 ```bash
 mkdir build-<architecture> && cd build-<architecture>
 ../build-support/makeimg.sh
+IMAGE_NAME=tulpar.iso ../build-support/makeimg.sh
 ```
+
+The ISO holds the desktop without the toolchain, which keeps it under the 2 GiB
+GitHub allows a release file; `PKGS_TO_INSTALL` chooses for it too.
 
 > [!NOTE]
 > On certain distros, like Ubuntu 24.04, one may get an error like:
