@@ -1,0 +1,96 @@
+#! /bin/sh
+
+version=0.1.0git
+revision=1
+git_url="https://github.com/tuna4ll/wayhoe.git"
+commit=c50bf2341aec0791f110676b2de93134d136d1e4
+source_allow_network=yes
+source_hostdeps="rust"
+hostdeps="gcc pkg-config rust"
+# pam-sys makes its bindings with bindgen, which needs libclang.
+imagedeps="build-essential clang libclang-dev"
+deps="core-libs wayland libxkbcommon xkeyboard-config libinput libudev-zero seatd mesa libdrm fontconfig linux-pam dbus ttf-dejavu adwaita-icon-theme-legacy adwaita-cursors"
+
+prepare() {
+    CARGO_HOME="${source_dir}/.jinx-cargo-home" cargo fetch --locked
+
+    # Tulpar's defaults, for users with no config.toml: its apps in the Dock
+    # (one that is not installed would still show, with a generic icon),
+    # kitty for Super+Return, the US layout the consoles and X use, and the
+    # icon and cursor themes it has.
+    sed -i '/^            dock: \[$/,/^            \]$/c\
+            dock: ["kitty", "wayhoe-files", "wayhoe-settings"]
+            s|^            keyboard_layout: "tr"\.into(),|            keyboard_layout: "us".into(),|
+            s|^            icon_theme: "WhiteSur"\.into(),|            icon_theme: "AdwaitaLegacy".into(),|
+            s|^            cursor_theme: "WhiteSur-cursors"\.into(),|            cursor_theme: "Adwaita".into(),|
+            s|^            terminal: "konsole"\.into(),|            terminal: "kitty".into(),|' src/config.rs
+    for _default in 'dock: \["kitty", "wayhoe-files"' 'keyboard_layout: "us"' 'icon_theme: "AdwaitaLegacy"' \
+        'cursor_theme: "Adwaita"' 'terminal: "kitty"'; do
+        grep -q "${_default}" src/config.rs || { echo "wayhoe: ${_default} not set" >&2; exit 1; }
+    done
+}
+
+build() {
+    _triple_var=$(echo "${OS_TRIPLET_RUST}" | tr a-z- A-Z_)
+    _triple_cc=$(echo "${OS_TRIPLET_RUST}" | tr - _)
+    # On x86_64 the target is the build machine's own triple, whose linker
+    # setting would also link build scripts with Tulpar's gcc; pam-sys's links
+    # the build machine's libclang, which that cannot. target-applies-to-host
+    # keeps them apart; it is unstable, hence RUSTC_BOOTSTRAP.
+    env CARGO_HOME="${source_dir}/.jinx-cargo-home" \
+        CARGO_NET_OFFLINE=true \
+        RUSTC_BOOTSTRAP=1 \
+        CARGO_TARGET_DIR="$(pwd -P)/target" \
+        "CARGO_TARGET_${_triple_var}_LINKER=${OS_TRIPLET}-gcc" \
+        "CARGO_TARGET_${_triple_var}_RUSTFLAGS=${TARGET_RUSTFLAGS}" \
+        "CC_${_triple_cc}=${OS_TRIPLET}-gcc" \
+        "AR_${_triple_cc}=${OS_TRIPLET}-ar" \
+        "BINDGEN_EXTRA_CLANG_ARGS_${_triple_cc}=--sysroot=${sysroot} --target=${OS_TRIPLET_RUST}" \
+        PKG_CONFIG_ALLOW_CROSS=1 \
+        PKG_CONFIG="${OS_TRIPLET}-pkg-config" \
+    cargo build -Zhost-config -Ztarget-applies-to-host \
+        --config target-applies-to-host=false --config host.linker=\"gcc\" \
+        --release --locked --target ${OS_TRIPLET_RUST} -j${parallelism} \
+        --manifest-path "${source_dir}"/Cargo.toml --bins
+}
+
+package() {
+    _out=target/${OS_TRIPLET_RUST}/release
+    for _bin in wayhoe wayhoe-settings wayhoe-quicklook wayhoe-files; do
+        install -Dm755 ${_out}/${_bin} "${dest_dir}${prefix}"/bin/${_bin}
+    done
+    # The session gets a bus of its own when it has none, from LightDM or a
+    # console alike: X sessions start one through X, which Wayland has not, and
+    # Wayhoe's notifications, media keys and portal need it.
+    mkdir -p "${dest_dir}${prefix}"/bin
+    sed '2i\
+[ -n "$DBUS_SESSION_BUS_ADDRESS" ] || exec dbus-run-session -- "$0" "$@"' \
+        "${source_dir}"/resources/wayhoe-session > "${dest_dir}${prefix}"/bin/wayhoe-session
+    chmod 755 "${dest_dir}${prefix}"/bin/wayhoe-session
+    grep -q 'exec dbus-run-session' "${dest_dir}${prefix}"/bin/wayhoe-session
+
+    # The session LightDM offers, and the default one (see the desktop package).
+    install -Dm644 "${source_dir}"/resources/wayhoe.desktop \
+        "${dest_dir}${prefix}"/share/wayland-sessions/wayhoe.desktop
+    for _app in wayhoe-settings wayhoe-quicklook wayhoe-files; do
+        install -Dm644 "${source_dir}"/resources/${_app}.desktop \
+            "${dest_dir}${prefix}"/share/applications/${_app}.desktop
+    done
+    install -Dm644 "${source_dir}"/resources/portal/wayhoe.portal \
+        "${dest_dir}${prefix}"/share/xdg-desktop-portal/portals/wayhoe.portal
+    install -Dm644 "${source_dir}"/resources/portal/wayhoe-portals.conf \
+        "${dest_dir}${prefix}"/share/xdg-desktop-portal/wayhoe-portals.conf
+
+    # The lock screen's; Tulpar has no system-auth, and its accounts have no
+    # passwords, so pam_unix takes an empty one as LightDM's does.
+    install -Dm644 /dev/stdin "${dest_dir}"/etc/pam.d/wayhoe <<'PAM'
+#%PAM-1.0
+auth     required pam_unix.so nullok
+account  required pam_unix.so
+PAM
+
+    install -Dm644 "${source_dir}"/config.example.toml \
+        "${dest_dir}${prefix}"/share/doc/wayhoe/config.example.toml
+
+    post_package_strip
+}

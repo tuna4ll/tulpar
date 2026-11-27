@@ -4,13 +4,14 @@
 
 Tulpar is an OS built with the [Tunix](https://github.com/tuna4ll/tunix)
 kernel and using GNU tools for the userland, with glibc as its C library,
-runit as its init and [Mosaic](https://github.com/tuna4ll/mosaic) as its
-desktop. This repository holds scripts and tools to build the OS from the
-ground up on a Linux-based system.
+runit as its init and [Wayhoe](https://github.com/tuna4ll/wayhoe), a Wayland
+compositor, as its desktop. This repository holds scripts and tools to build
+the OS from the ground up on a Linux-based system.
 
 Tulpar is named after the [Tulpar](https://en.wikipedia.org/wiki/Tulpar), the
 winged horse of Turkic mythology.
 
+![Tulpar running the Wayhoe desktop with kitty](assets/screenshot-wayhoe.png)
 ![Tulpar running the Mosaic desktop with a terminal](assets/screenshot1.png)
 ![Tulpar showing fastfetch on the console](assets/screenshot2.png)
 ![Tulpar running xeyes, xclock and glxgears](assets/screenshot3.png)
@@ -23,7 +24,7 @@ disk image, `tulpar.img`, with an EFI system partition holding Limine and the
 kernel and an ext4 root.
 
 The ISO runs from a CD, a DVD or a USB stick, by BIOS or UEFI, with the
-Mosaic desktop. It never writes to what it boots from: changes are kept in
+Wayhoe desktop. It never writes to what it boots from: changes are kept in
 memory and are gone after a reboot. The disk image is an installed system,
 which keeps its changes and also has the native toolchain.
 
@@ -117,8 +118,10 @@ The aarch64 UEFI firmware comes from the EDK2 project; its path differs between
 distributions and can be given as `AARCH64_FIRMWARE=`.
 
 After boot, LightDM greets on tty7: pick `tulpar` and press Enter, as the
-accounts `tulpar` and `root` have no passwords, and the Mosaic desktop starts.
-The text consoles stay on tty1 to tty3, where `startx` starts Mosaic as well,
+accounts `tulpar` and `root` have no passwords, and the Wayhoe desktop starts;
+Super+Return opens kitty. [Mosaic](https://github.com/tuna4ll/mosaic), an X
+desktop, can be picked at the login screen instead. The text consoles stay on
+tty1 to tty3, where `wayhoe-session` starts Wayhoe and `startx` Mosaic,
 and SDDM can be installed instead of LightDM as `sddm`. dhcpcd brings up the
 network on boot, and packages can be installed or updated with `xbps-install`
 from [tulpar-packs](https://github.com/tuna4ll/tulpar-packs).
@@ -178,7 +181,7 @@ GitHub allows a release file; `PKGS_TO_INSTALL` chooses for it too.
 > sudo sysctl kernel.apparmor_restrict_unprivileged_userns=0
 > ```
 
-By default the image holds the Mosaic desktop and a native toolchain (GCC,
+By default the image holds the Wayhoe desktop and a native toolchain (GCC,
 binutils, make). For a minimal command-line only
 environment, one can pass nothing (or a list of desired packages, `base` is
 implied) as `PKGS_TO_INSTALL`:

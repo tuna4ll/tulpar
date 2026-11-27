@@ -1,6 +1,6 @@
 
 Tulpar GNU/Tunix (\l)
 
-Users: 'root' and 'tulpar', no passwords. The Mosaic desktop starts with LightDM on tty7;
-from here, 'startx' starts it too.
+Users: 'root' and 'tulpar', no passwords. The Wayhoe desktop starts with LightDM on tty7;
+from here, 'wayhoe-session' starts it too, and 'startx' the Mosaic X desktop.
 

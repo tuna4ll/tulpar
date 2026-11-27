@@ -1,0 +1,16 @@
+#! /bin/sh
+
+# Adwaita's cursors alone, as Arch packages them: X cursor files the release
+# ships ready, for Wayhoe and X, which draw no pointer without a theme.
+version=49.0
+revision=1
+tarball_url="https://download.gnome.org/sources/adwaita-icon-theme/${version%%.*}/adwaita-icon-theme-${version}.tar.xz"
+tarball_blake2b="9f4817a28b469a05731e25164290ce469f6940b343178a22a9b3043d9a84499cf640380edd02b9e24baf74b623501a50491f86b3d79845a5e02ef5af9b832edc"
+
+package() {
+    mkdir -p "${dest_dir}${prefix}"/share/icons/Adwaita
+    cp -a "${source_dir}"/Adwaita/cursors "${dest_dir}${prefix}"/share/icons/Adwaita/
+    install -Dm644 "${source_dir}"/COPYING "${dest_dir}${prefix}"/share/licenses/adwaita-cursors/COPYING
+    install -Dm644 "${source_dir}"/COPYING_CCBYSA3 "${dest_dir}${prefix}"/share/licenses/adwaita-cursors/COPYING_CCBYSA3
+    install -Dm644 "${source_dir}"/COPYING_LGPL "${dest_dir}${prefix}"/share/licenses/adwaita-cursors/COPYING_LGPL
+}

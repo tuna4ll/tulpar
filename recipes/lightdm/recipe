@@ -1,7 +1,7 @@
 #! /bin/sh
 
 version=1.33.1
-revision=2
+revision=3
 tarball_url="https://github.com/canonical/lightdm/releases/download/${version}/lightdm-${version}.tar.xz"
 tarball_blake2b="0b6af0a17802a9964c3ded210e25f49fb35d603c1accdd8bd414aae3fd46772162ab8ce98a55646710238ad0e568e8be18124bc91dd7bbe8aab45b0eb8ce9c48"
 source_imagedeps="autoconf automake libtool intltool gtk-doc-tools gobject-introspection libgirepository1.0-dev valac yelp-tools"
@@ -83,7 +83,10 @@ esac
 for file in /etc/X11/Xresources "$HOME/.Xresources"; do
     [ -f "$file" ] && xrdb -merge "$file"
 done
-exec "$@"
+# LightDM passes the session's Exec line as one word, which is split here, as
+# Arch's wrapper does: "dbus-run-session wayhoe-session" is a command and its
+# argument, not a program of that name.
+exec $@
 XSESSION
 
     # Tulpar's accounts have no passwords, so pam_unix takes an empty one;

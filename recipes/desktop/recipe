@@ -2,13 +2,17 @@
 
 skip_pkg_check=yes
 version=0.0
-revision=7
+revision=8
 
-# Tunix has DRM/KMS (/dev/dri/card0) and evdev (/dev/input/event*), and no udev, so the
-# X server is set up statically by /etc/X11/xorg.conf.d/10-tulpar.conf.
-deps="base mosaic xorg-server xorg-xinit xf86-input-evdev st ttf-dejavu"
+# Wayhoe, a Wayland compositor, is the desktop; kitty is its terminal.
+deps="base wayhoe kitty"
 
-# LightDM greets at boot and starts the Mosaic session; elogind tracks the
+# Mosaic stays as an X session to pick at the login screen. Tunix has DRM/KMS
+# (/dev/dri/card0) and evdev (/dev/input/event*), and no udev, so the X server
+# is set up statically by /etc/X11/xorg.conf.d/10-tulpar.conf.
+deps+=" mosaic xorg-server xorg-xinit xf86-input-evdev st ttf-dejavu"
+
+# LightDM greets at boot and starts the Wayhoe session; elogind tracks the
 # sessions and, with polkit, lets them power off and reboot.
 deps+=" lightdm lightdm-gtk-greeter elogind polkit"
 
@@ -17,3 +21,11 @@ deps+=" xorg-xeyes xorg-xclock mesa-demos"
 
 # Sound.
 deps+=" audio speech-dispatcher"
+
+package() {
+    # The session LightDM starts for a user who has not picked another.
+    install -Dm644 /dev/stdin "${dest_dir}"/etc/lightdm/lightdm.conf.d/50-tulpar.conf <<'EOF'
+[Seat:*]
+user-session=wayhoe
+EOF
+}
