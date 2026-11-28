@@ -70,6 +70,7 @@ mkdir limine-tmp
 limine_dir=limine-tmp/usr/local/share/limine
 
 mkdir -p esp_root/EFI/BOOT esp_root/boot/limine
+initramfs=
 case "${ARCH}" in
     x86_64)
         cp "${limine_dir}"/BOOTX64.EFI "${limine_dir}"/BOOTIA32.EFI esp_root/EFI/BOOT/
@@ -77,6 +78,13 @@ case "${ARCH}" in
         cp sysroot/usr/share/tunix/kernel.elf esp_root/boot/
         protocol=limine
         kernel=kernel.elf
+        # The initramfs: the drivers that take the console before the root is
+        # mounted (nv50), loaded by the kernel when a device asks for them.
+        if [ -f sysroot/usr/share/tunix/initramfs.img ]; then
+            cp sysroot/usr/share/tunix/initramfs.img esp_root/boot/
+            initramfs="
+    module_path: boot():/boot/initramfs.img"
+        fi
         ;;
     aarch64)
         # Tunix boots on arm64 as an Image, with the Linux protocol.
@@ -98,12 +106,17 @@ timeout: 3
 
 /Tulpar
     protocol: ${protocol}
-    path: boot():/boot/${kernel}
+    path: boot():/boot/${kernel}${initramfs}
     cmdline: ${root} init=/sbin/init
+
+/Tulpar - safe graphics (firmware framebuffer)
+    protocol: ${protocol}
+    path: boot():/boot/${kernel}${initramfs}
+    cmdline: ${root} init=/sbin/init nomodeset
 
 /Tulpar - emergency shell
     protocol: ${protocol}
-    path: boot():/boot/${kernel}
+    path: boot():/boot/${kernel}${initramfs}
     cmdline: ${root} init=/usr/libexec/tulpar-rescue
 CONF
 

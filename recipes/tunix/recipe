@@ -2,9 +2,9 @@
 
 skip_pkg_check=yes
 version=0.1.0git
-revision=28
+revision=29
 git_url="https://github.com/tuna4ll/tunix.git"
-commit=9f8fb4ce8cc46398cf838a70c661d4ab1b1cf910
+commit=bdc8207e2f9ce725d13f567e64e21c2745a94ed1
 source_imagedeps="curl git ca-certificates"
 imagedeps="build-essential gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu"
 deps="kmod mtools"
@@ -21,7 +21,7 @@ early_prepare() {
 
 build() {
     case "${JINX_ARCH}" in
-        x86_64) _targets="kernel modules vmlinuz" ;;
+        x86_64) _targets="kernel modules vmlinuz initramfs" ;;
         aarch64) _targets="aarch64-core modules-aarch64" ;;
     esac
 
@@ -40,8 +40,8 @@ package() {
     # this one hang when writing to FAT.
     install -Dm755 /dev/stdin "${dest_dir}${prefix}"/libexec/tunix/install-kernel <<'EOF'
 #! /bin/sh
-# Copies the kernel of the tunix package to the boot partition, the second
-# partition of the disk Tulpar's root, the third, is on.
+# Copies the kernel of the tunix package, and its initramfs, to the boot
+# partition, the second partition of the disk Tulpar's root, the third, is on.
 kernel=/usr/share/tunix/kernel.elf
 name=kernel.elf
 if [ -f /usr/share/tunix/Image ]; then
@@ -74,6 +74,31 @@ if ! mcopy -i "${esp}" "${kernel}" "::/boot/${name}.new"; then
 fi
 mdel -i "${esp}" "::/boot/${name}" 2>/dev/null
 mren -i "${esp}" "::/boot/${name}.new" "::/boot/${name}" || exit 1
+# The initramfs carries the drivers that take the console before the root is
+# mounted (nv50); every entry that boots the kernel loads it.
+initramfs=/usr/share/tunix/initramfs.img
+if [ -f "${initramfs}" ]; then
+    mdel -i "${esp}" "::/boot/initramfs.img.new" 2>/dev/null
+    if mcopy -i "${esp}" "${initramfs}" "::/boot/initramfs.img.new"; then
+        mdel -i "${esp}" "::/boot/initramfs.img" 2>/dev/null
+        mren -i "${esp}" "::/boot/initramfs.img.new" "::/boot/initramfs.img" ||
+            echo "tunix: could not put the initramfs in place on ${esp}" >&2
+    else
+        mdel -i "${esp}" "::/boot/initramfs.img.new" 2>/dev/null
+        echo "tunix: could not copy the initramfs to ${esp}" >&2
+    fi
+    conf=$(mktemp)
+    if mtype -i "${esp}" ::/boot/limine/limine.conf > "${conf}" 2>/dev/null &&
+        ! grep -q "module_path: boot():/boot/initramfs.img" "${conf}"; then
+        awk -v kernel="boot():/boot/${name}" '
+            { print }
+            $1 == "path:" && $2 == kernel { print "    module_path: boot():/boot/initramfs.img" }
+        ' "${conf}" > "${conf}.new" && mv "${conf}.new" "${conf}"
+        mcopy -o -i "${esp}" "${conf}" ::/boot/limine/limine.conf ||
+            echo "tunix: could not add the initramfs to ${esp}'s boot entries" >&2
+    fi
+    rm -f "${conf}"
+fi
 # USB keyboards are a module now, which nothing loads with init=/bin/bash: the
 # emergency entry starts from tulpar-rescue, which loads them first.
 conf=$(mktemp)
@@ -98,6 +123,7 @@ EOF
         install -Dm644 kernel.elf "${dest_dir}${prefix}"/share/tunix/kernel.elf
         # The same kernel for loaders other than Limine: GRUB, systemd-boot, UEFI itself.
         install -Dm644 vmlinuz "${dest_dir}${prefix}"/share/tunix/vmlinuz
+        install -Dm644 initramfs.img "${dest_dir}${prefix}"/share/tunix/initramfs.img
     fi
 
     mkdir -p "${dest_dir}${prefix}"/lib/modules/${_release}/kernel
