@@ -1,0 +1,35 @@
+#! /bin/sh
+
+version=1.25.2
+revision=1
+tarball_url="https://openal-soft.org/openal-releases/openal-soft-${version}.tar.bz2"
+tarball_blake2b="b7f5a9b97a5f2e5619cc4ffa8e4acda3f4db5c9f39203ddce3294864b546c58d070b062d8c94ee79481dfdc5426da442720ea744a2dd20d995f1a883ca69aad9"
+hostdeps="gcc pkg-config"
+deps="core-libs alsa-lib libpulse pipewire"
+
+configure() {
+    # PipeWire first, then PulseAudio and ALSA, each loaded when used.
+    cmake_configure \
+        -DALSOFT_EXAMPLES=OFF \
+        -DALSOFT_TESTS=OFF \
+        -DALSOFT_NO_CONFIG_UTIL=ON \
+        -DALSOFT_BACKEND_PIPEWIRE=ON \
+        -DALSOFT_BACKEND_PULSEAUDIO=ON \
+        -DALSOFT_BACKEND_ALSA=ON \
+        -DALSOFT_BACKEND_OSS=OFF \
+        -DALSOFT_BACKEND_JACK=OFF \
+        -DALSOFT_BACKEND_SNDIO=OFF \
+        -DALSOFT_REQUIRE_PIPEWIRE=ON \
+        -DALSOFT_REQUIRE_PULSEAUDIO=ON \
+        -DALSOFT_REQUIRE_ALSA=ON
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    post_package_strip
+}

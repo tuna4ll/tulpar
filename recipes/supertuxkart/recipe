@@ -1,0 +1,38 @@
+#! /bin/sh
+
+version=1.5
+revision=2
+tarball_url="https://github.com/supertuxkart/stk-code/releases/download/${version}/SuperTuxKart-${version}-src.tar.gz"
+tarball_blake2b="8becdf6be705c8549f3158ea0798fa46ec116c50f8002ff6a927c412a81534d195aaa40242a4cf68312a6336db559f85bd4bff5074ca4d54c18896f8aa3afddc"
+hostdeps="gcc pkg-config"
+deps="core-libs sdl2 openal-soft libogg libvorbis freetype2 harfbuzz curl openssl libpng libjpeg-turbo zlib sqlite mesa"
+
+configure() {
+    # The OpenGL renderer; the Vulkan one needs shaderc, and Wiimotes need
+    # BlueZ, which Tulpar does not have. ENet, Squish, mcpp and AngelScript
+    # are the copies the source comes with, linked in statically as upstream
+    # builds them. The tracks, karts and music come with the source too.
+    cmake_configure \
+        -DBUILD_SHARED_LIBS=OFF \
+        -DNO_SHADERC=ON \
+        -DUSE_WIIUSE=OFF \
+        -DBUILD_RECORDER=OFF \
+        -DUSE_MOJOAL=OFF \
+        -DUSE_CRYPTO_OPENSSL=ON \
+        -DUSE_SYSTEM_SQUISH=OFF \
+        -DUSE_SYSTEM_MCPP=OFF \
+        -DUSE_SYSTEM_ENET=OFF \
+        -DUSE_SYSTEM_ANGELSCRIPT=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+    # The bundled AngelScript installs itself too; it is linked in already.
+    rm -rf "${dest_dir}${prefix}"/include "${dest_dir}${prefix}"/lib
+
+    post_package_strip
+}

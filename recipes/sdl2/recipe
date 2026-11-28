@@ -1,0 +1,47 @@
+#! /bin/sh
+
+version=2.32.10
+revision=1
+tarball_url="https://github.com/libsdl-org/SDL/releases/download/release-${version}/SDL2-${version}.tar.gz"
+tarball_blake2b="932eb4b2994aba27390c3e2c205e359229093f78f591c5fe91f2463344554b40ece92dc8f3a9853d152e917a4317123cc260ddb9a3e140f1f68bf6b6a3de7d74"
+imagedeps="libwayland-bin libwayland-dev pkgconf"
+hostdeps="gcc pkg-config"
+deps="core-libs libx11 libxext libxcursor libxi libxfixes libxrandr libxscrnsaver wayland wayland-protocols libxkbcommon libdecor mesa libdrm alsa-lib libpulse pipewire dbus libudev-zero"
+
+configure() {
+    # Wayland, X11 and KMS/DRM for video; PipeWire, PulseAudio and ALSA for
+    # sound, each loaded when used, as SDL is built elsewhere.
+    cmake_configure \
+        -DSDL_STATIC=OFF \
+        -DSDL_TEST=OFF \
+        -DSDL_RPATH=OFF \
+        -DSDL_WAYLAND=ON \
+        -DSDL_X11=ON \
+        -DSDL_KMSDRM=ON \
+        -DSDL_PIPEWIRE=ON \
+        -DSDL_PULSEAUDIO=ON \
+        -DSDL_ALSA=ON \
+        -DSDL_JACK=OFF \
+        -DSDL_ESD=OFF \
+        -DSDL_ARTS=OFF \
+        -DSDL_NAS=OFF \
+        -DSDL_SNDIO=OFF \
+        -DSDL_LIBSAMPLERATE=OFF \
+        -DSDL_RPI=OFF \
+        -DSDL_VIVANTE=OFF \
+        -DSDL_IBUS=OFF
+}
+
+build() {
+    cmake --build . -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" cmake --install .
+
+    sed -Ei "s|/sysroot(/)?|/|g" "${dest_dir}${prefix}"/bin/sdl2-config \
+        "${dest_dir}${prefix}"/lib/pkgconfig/sdl2.pc \
+        "${dest_dir}${prefix}"/lib/cmake/SDL2/*.cmake
+
+    post_package_strip
+}
