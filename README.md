@@ -36,7 +36,12 @@ a 32-bit framebuffer, so with GRUB:
 ```
 set gfxpayload=1280x800x32
 linux /vmlinuz root=LABEL=tulpar-root init=/sbin/init
+initrd /initramfs.img
 ```
+
+`/usr/share/tunix/initramfs.img` carries the drivers that take the console
+before the root is mounted, today `nv50`; without it Tulpar boots on the
+firmware's framebuffer.
 
 Prebuilt ISOs and disk images for both architectures are attached to every
 [release](https://github.com/tuna4ll/tulpar/releases), the disk images
@@ -139,6 +144,13 @@ from [tulpar-packs](https://github.com/tuna4ll/tulpar-packs).
 Tulpar should run on 64-bit x86 machines that Tunix supports, booting by BIOS
 or UEFI, and on 64-bit ARM machines with UEFI that Tunix supports. To run it, one can write `tulpar.img` to a USB flash drive or a disk
 and boot from it.
+
+On NVIDIA GPUs of the GT215, GT216 and GT218 chips (GeForce GT 240, GT 220,
+210, and the GT 3xxM laptop parts), Tunix drives the display itself and
+Mesa's `nouveau` driver draws with the GPU: Wayhoe, OpenGL up to 3.3 and
+games such as SuperTuxKart (`xbps-install supertuxkart`) run accelerated;
+it has been tested on a GeForce GT 335M (GT215). The boot menu's "safe graphics" entry leaves the firmware's framebuffer as it
+is.
 
 ## Building
 
